@@ -1,31 +1,25 @@
 import { useState } from "react";
 import { login as loginApi } from "@/services/authService";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
-export default function LoginPage() {
+export default function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const { login } = useAuth(); // context function to save token
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic validation
     if (!username.trim() || !password.trim()) {
       alert("Please enter both username and password");
       return;
     }
 
     try {
-      // Call backend login endpoint
       const res = await loginApi(username.trim(), password.trim());
-
-      // Save JWT token in context
       login(res.token);
-
-      // Redirect to dashboard
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
@@ -34,36 +28,63 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 w-full">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded shadow-md w-full max-w-md" // Changed to max-w-md
-      >
-        <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
+    <div className="w-full max-w-md">
+      <h2 className="text-2xl font-semibold text-center mb-8">
+        Login in to <span className="font-bold">Student of the Year</span>
+      </h2>
 
-        <input
-          type="text"
-          placeholder="Username"
-          className="w-full border px-3 py-2 mb-3 rounded"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Username */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Username</label>
+          <input
+            type="text"
+            placeholder="Enter your username"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#9F9FED]"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full border px-3 py-2 mb-3 rounded"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        {/* Password */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Password</label>
+          <input
+            type="password"
+            placeholder="Enter your password"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#9F9FED]"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div className="text-right mt-1">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-[#9F9FED] hover:text-[#736CED]"
+            >
+              Forgot Password?
+            </Link>
+          </div>
+        </div>
 
+        {/* Submit */}
         <button
           type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition"
+          className="w-full bg-[#9F9FED] hover:bg-[#736CED] text-white font-medium py-2 px-4 rounded-md transition-colors"
         >
-          Login
+          Log in
         </button>
       </form>
+
+      {/* Sign Up */}
+      <p className="mt-6 text-center text-sm">
+        Don’t have an account?{" "}
+        <Link
+          to="/register"
+          className="text-[#9F9FED] hover:text-[#736CED] font-medium"
+        >
+          Sign Up
+        </Link>
+      </p>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 export default function HomePage() {
   return (
-    <div className="p-6 w-full text-center"> {/* Remove max-w-4xl mx-auto */}
+    <div className="p-6 w-full text-center bg-white min-h-screen">
       <h1 className="text-3xl font-bold mb-4">Welcome to Student of the Year 🎓</h1>
       <p className="mt-2 text-gray-600 mb-6">
         Please login or register to continue.
