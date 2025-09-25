@@ -30,7 +30,7 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-md">
       <h2 className="text-2xl font-semibold text-center mb-8">
-        Login in to <span className="font-bold">Student of the Year</span>
+        Login to <span className="font-bold">Student of the Year</span>
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
