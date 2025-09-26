@@ -2,6 +2,7 @@ import { useState } from "react";
 import { login as loginApi } from "@/services/authService";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import logo from "@/assets/zoopla.png"; // import your logo
 
 export default function LoginForm() {
   const [username, setUsername] = useState("");
@@ -28,10 +29,18 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md">
-      <h2 className="text-2xl font-semibold text-center mb-8">
-        Login to <span className="font-bold">Student of the Year</span>
-      </h2>
+    <div className="w-full max-w-md mx-auto px-4">
+      {/* Logo + Heading */}
+      <div className="text-center mb-8">
+        <img
+          src={logo}
+          alt="Logo"
+          className="h-16 w-28 sm:h-20 sm:w-40 object-contain mx-auto mb-4"
+        />
+        <h2 className="text-xl sm:text-2xl font-semibold">
+          Login to <span className="font-bold">Student of the Year</span>
+        </h2>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Username */}
