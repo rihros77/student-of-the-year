@@ -11,22 +11,31 @@ export default function LoginForm() {
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!username.trim() || !password.trim()) {
-      alert("Please enter both username and password");
-      return;
+  if (!username.trim() || !password.trim()) {
+    alert("Please enter both username and password");
+    return;
+  }
+
+  try {
+    const res = await loginApi(username.trim(), password.trim());
+
+    // ✅ Save JWT
+    login(res.token);
+
+    // ✅ Save studentId (from backend response)
+    if (res.user?.id) {
+      localStorage.setItem("studentId", res.user.id);
     }
 
-    try {
-      const res = await loginApi(username.trim(), password.trim());
-      login(res.token);
-      navigate("/dashboard");
-    } catch (err) {
-      console.error(err);
-      alert("Invalid credentials. Please try again.");
-    }
-  };
+    navigate("/dashboard");
+  } catch (err) {
+    console.error(err);
+    alert("Invalid credentials. Please try again.");
+  }
+};
+
 
   return (
     <div className="w-full max-w-md mx-auto px-4">

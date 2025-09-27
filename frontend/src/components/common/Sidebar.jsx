@@ -13,7 +13,8 @@ import logo from "@/assets/zoopla.png";
 
 export default function Sidebar({ activePage }) {
   return (
-    <aside className="w-64 bg-white shadow-sm border-r">
+    <aside className="w-64 bg-white border-r border-gray-300">
+
       <div className="p-4 flex items-center gap-2">
         <img src={logo} alt="Zoopla" className="h-8 w-8" />
         <span className="font-bold text-lg text-[#736CED]">ZOOPLA</span>

@@ -20,7 +20,8 @@ export default function Layout({ children, activePage }) {
 /* Header component */
 function Header({ activePage }) {
   return (
-    <header className="flex justify-between items-center bg-white shadow-sm px-6 py-4">
+    <header className="flex justify-between items-center bg-white border-b border-gray-300 px-6 py-4">
+
       {/* Left part: Welcome message only for dashboard */}
       <div className="text-xl font-semibold">
         {activePage === "Dashboard" && "Welcome Back, Rihana!"}
@@ -28,7 +29,10 @@ function Header({ activePage }) {
 
       {/* Right part: avatar and bell */}
       <div className="flex items-center gap-4">
-        <button className="p-2 rounded-full hover:bg-gray-100">🔔</button>
+        <button className="hover:bg-gray-100">
+  🔔
+</button>
+
         <img
           src="https://i.pravatar.cc/39"
           alt="Profile"

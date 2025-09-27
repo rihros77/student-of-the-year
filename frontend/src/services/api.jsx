@@ -1,16 +1,15 @@
+// src/services/api.jsx
 import axios from "axios";
 import { getToken } from "@/services/authService";
 
-// ✅ Create Axios instance
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api", 
-  headers: {
-    "Content-Type": "application/json",
-  },
+// ✅ Axios instance
+const API = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api",
+  headers: { "Content-Type": "application/json" },
 });
 
-// ✅ Add token to every request if available
-api.interceptors.request.use(
+// ✅ Add JWT if available
+API.interceptors.request.use(
   (config) => {
     const token = getToken();
     if (token) {
@@ -21,4 +20,28 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-export default api;
+// -----------------
+// Example endpoints
+// -----------------
+export const getLeaderboard = async () => {
+  try {
+    const res = await API.get("/leaderboard/");
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching leaderboard:", err);
+    return [];
+  }
+};
+
+export const getStudentProfile = async (studentId) => {
+  try {
+    const res = await API.get(`/students/${studentId}`);
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching student profile:", err);
+    return null;
+  }
+};
+
+// add more API calls here...
+export default API;

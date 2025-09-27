@@ -1,32 +1,75 @@
+// src/pages/DashboardPage.jsx
+import React, { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Layout from "@/components/common/Layout";
-
-/* Example data */
-const pointsData = [
-  { category: "Academics", points: 120 },
-  { category: "Sports", points: 90 },
-  { category: "Cultural", points: 80 },
-  { category: "Technical", points: 150 },
-  { category: "Social", points: 60 },
-];
-
-const activities = [
-  { icon: "🏆", text: "John Doe won Coding Platform - 1st place", date: "Today, 22:04" },
-  { icon: "🏅", text: "Jane Doe earned technical star badge", date: "Today, 16:00" },
-  { icon: "✨", text: "You received Extra Credit from Prof. Smith", date: "Today, 13:37" },
-  { icon: "📌", text: "Joe Smith participated in the college marathon", date: "2nd Sep 2025, 10:15" },
-  { icon: "🏆", text: "Emma Stone won Debate Competition – 2nd Place", date: "2nd Sep 2025, 09:20" },
-  { icon: "📌", text: "You participated in Art Exhibition", date: "1st Sep 2025" },
-];
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { getStudentProfile } from "@/services/api";
 
 export default function DashboardPage() {
+  const [student, setStudent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const studentId = localStorage.getItem("studentId"); // save on login
+
+  useEffect(() => {
+    const fetchStudent = async () => {
+      try {
+        const data = await getStudentProfile(studentId);
+        setStudent(data);
+      } catch (err) {
+        console.error("Failed to fetch student data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStudent();
+  }, [studentId]);
+
+  if (loading) return <LoadingSpinner />;
+
+  if (!student)
+    return <p className="text-red-500 text-center mt-6">Failed to load student data.</p>;
+
+  // Provide safe defaults
+  const totals = student.totals || {
+    academics_points: 0,
+    sports_points: 0,
+    cultural_points: 0,
+    technical_points: 0,
+    social_points: 0,
+    composite_points: 0,
+  };
+
+  const badges = student.badges || [];
+  const activities = student.transactions?.slice(0, 10) || [];
+
+  // Prepare points data for the chart
+  const pointsData = [
+    { category: "Academics", points: totals.academics_points },
+    { category: "Sports", points: totals.sports_points },
+    { category: "Cultural", points: totals.cultural_points },
+    { category: "Technical", points: totals.technical_points },
+    { category: "Social", points: totals.social_points },
+  ];
+
   return (
     <Layout activePage="Dashboard">
-      {/* Cards */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <StatCard title="Total Points" value="820/1000" progress={82} />
-        <StatCard title="Badges Earned" value="5/10" progress={50} />
-        <StatCard title="Events Participated" value="8/12" progress={66} />
+        <StatCard
+          title="Total Points"
+          value={`${totals.composite_points}`}
+          progress={Math.min(Math.round((totals.composite_points / 1000) * 100), 100)}
+        />
+        <StatCard
+          title="Badges Earned"
+          value={`${badges.length}`}
+          progress={Math.min(Math.round((badges.length / 10) * 100), 100)}
+        />
+        <StatCard
+          title="Events Participated"
+          value={`${activities.length}`}
+          progress={Math.min(Math.round((activities.length / 12) * 100), 100)}
+        />
       </div>
 
       {/* Charts & Activity */}
@@ -50,24 +93,53 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity & Badges */}
         <div className="bg-white rounded-xl shadow-sm p-4">
           <h2 className="text-sm font-medium mb-4">Recent Activity</h2>
-          <ul className="space-y-4">
-            {activities.map((a, i) => (
-              <li key={i} className="flex flex-col text-sm">
-                <span>{a.icon} {a.text}</span>
-                <span className="text-gray-500 text-xs">{a.date}</span>
-              </li>
-            ))}
-          </ul>
+          {activities.length > 0 ? (
+            <ul className="space-y-4">
+              {activities.map((a) => (
+                <li key={a.id} className="flex flex-col text-sm">
+                  <span>
+                    {a.icon || "📌"} {a.reason} {a.event_title ? `- ${a.event_title}` : ""}
+                  </span>
+                  <span className="text-gray-500 text-xs">
+                    {new Date(a.created_at).toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No recent activity yet.</p>
+          )}
+
+          <div className="mt-6">
+            <h3 className="text-sm font-medium mb-2">Badges Earned</h3>
+            {badges.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {badges.map((badge) => (
+                  <div
+                    key={badge.id}
+                    className="bg-blue-100 px-2 py-1 rounded flex items-center gap-1"
+                  >
+                    {badge.icon_url && (
+                      <img src={badge.icon_url} alt={badge.name} className="w-5 h-5" />
+                    )}
+                    <span className="text-xs font-semibold">{badge.name}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No badges earned yet.</p>
+            )}
+          </div>
         </div>
       </div>
     </Layout>
   );
 }
 
-/* StatCard with gradient */
+/* StatCard Component */
 function StatCard({ title, value, progress }) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-4">
@@ -78,7 +150,7 @@ function StatCard({ title, value, progress }) {
           className="h-2 rounded-full"
           style={{
             width: `${progress}%`,
-            background: 'linear-gradient(to right, #5B5B87, #9F9FED)',
+            background: "linear-gradient(to right, #5B5B87, #9F9FED)",
           }}
         ></div>
       </div>
