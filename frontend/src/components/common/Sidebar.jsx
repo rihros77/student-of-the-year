@@ -8,34 +8,96 @@ import {
   Globe,
   FileText,
   Award,
+  // Admin-specific Icons
+  PlusCircle, 
+  History, 
+  Lock, 
+  Settings, 
+  Trophy, 
+  ClipboardList, 
+  Zap, 
 } from "lucide-react";
 import logo from "@/assets/zoopla.png";
 
-export default function Sidebar({ activePage }) {
+// --- Menu Definitions ---
+
+// Data structure: { type: 'item'|'title', icon: IconComponent, label: string, page: string, title?: string }
+
+const studentMenu = [
+  { type: 'item', icon: Award, label: "Achievements", page: 'Achievements' },
+  { type: 'item', icon: CalendarDays, label: "Events", page: 'Events' },
+  { type: 'title', title: "Points" },
+  { type: 'item', icon: PieChart, label: "Breakdown", page: 'Breakdown' },
+  { type: 'item', icon: LineChart, label: "Timeline", page: 'Timeline' },
+  { type: 'title', title: "Leaderboards" },
+  { type: 'item', icon: Users, label: "Class", page: 'Class' },
+  { type: 'item', icon: Building2, label: "Department", page: 'Department' },
+  { type: 'item', icon: Globe, label: "College", page: 'College' },
+  { type: 'title', title: "Documents" },
+  { type: 'item', icon: FileText, label: "Official Transcript", page: 'Official Transcript' },
+  { type: 'item', icon: Award, label: "Certificates", page: 'Certificates' },
+];
+
+const adminMenu = [
+  { type: 'title', title: "Content Management" },
+  { type: 'item', icon: CalendarDays, label: "Manage Events", page: 'AdminEvents' },
+  { type: 'item', icon: Users, label: "Students & Users", page: 'AdminUsers' },
+  { type: 'item', icon: Building2, label: "Departments", page: 'AdminDepartments' },
+  { type: 'item', icon: Zap, label: "Badges Engine", page: 'AdminBadges' },
+
+  { type: 'title', title: "Scoring & Awards" },
+  { type: 'item', icon: PlusCircle, label: "Award Points", page: 'AwardPoints' },
+  { type: 'item', icon: History, label: "Audit Trail", page: 'AuditTrail' },
+  { type: 'item', icon: ClipboardList, label: "Reports", page: 'AdminReports' },
+  
+  { type: 'title', title: "System Control" },
+  { type: 'item', icon: Lock, label: "Snapshot & Freeze", page: 'SnapshotFreeze' },
+  { type: 'item', icon: Trophy, label: "Final Reveal", page: 'FinalReveal' },
+  { type: 'item', icon: Settings, label: "System Settings", page: 'SystemSettings' },
+];
+
+// --- Component Definitions ---
+
+export default function Sidebar({ activePage, role = 'student' }) { 
+  
+  // Select the appropriate menu based on the role prop
+  const menuData = role === 'admin' ? adminMenu : studentMenu;
+  const initialDashboardLabel = role === 'admin' ? "Admin Dashboard" : "Dashboard";
+
   return (
     <aside className="w-64 bg-white border-r border-gray-300">
-
+      
       <div className="p-4 flex items-center gap-2">
         <img src={logo} alt="Zoopla" className="h-8 w-8" />
         <span className="font-bold text-lg text-[#736CED]">ZOOPLA</span>
       </div>
+
       <nav className="mt-4 space-y-1">
-        <MenuItem icon={<LayoutDashboard size={18} />} label="Dashboard" active={activePage === 'Dashboard'} />
-        <MenuItem icon={<Award size={18} />} label="Achievements" active={activePage === 'Achievements'} />
-        <MenuItem icon={<CalendarDays size={18} />} label="Events" active={activePage === 'Events'} />
+        {/* Main Dashboard Link (Always first) */}
+        <MenuItem 
+          icon={<LayoutDashboard size={18} />} 
+          label={initialDashboardLabel} 
+          active={activePage === 'Dashboard'} 
+        />
 
-        <SectionTitle title="Points" />
-        <MenuItem icon={<PieChart size={18} />} label="Breakdown" active={activePage === 'Breakdown'} />
-        <MenuItem icon={<LineChart size={18} />} label="Timeline" active={activePage === 'Timeline'} />
-
-        <SectionTitle title="Leaderboards" />
-        <MenuItem icon={<Users size={18} />} label="Class" active={activePage === 'Class'} />
-        <MenuItem icon={<Building2 size={18} />} label="Department" active={activePage === 'Department'} />
-        <MenuItem icon={<Globe size={18} />} label="College" active={activePage === 'College'} />
-
-        <SectionTitle title="Documents" />
-        <MenuItem icon={<FileText size={18} />} label="Official Transcript" active={activePage === 'Official Transcript'} />
-        <MenuItem icon={<Award size={18} />} label="Certificates" active={activePage === 'Certificates'} />
+        {/* Dynamic Menu Rendering */}
+        {menuData.map((item, index) => {
+          if (item.type === 'title') {
+            return <SectionTitle key={index} title={item.title} />;
+          }
+          if (item.type === 'item') {
+            const Icon = item.icon; 
+            return (
+              <MenuItem 
+                key={index}
+                icon={<Icon size={18} />} 
+                label={item.label} 
+                active={activePage === item.page} 
+              />
+            );
+          }
+          return null;
+        })}
       </nav>
     </aside>
   );
