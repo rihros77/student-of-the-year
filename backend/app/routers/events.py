@@ -3,145 +3,143 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.event import Event
 from app.models.point_transaction import PointTransaction
-from app.services.scoring_service import recalculate_student_totals # <-- NEW IMPORT
+from app.services.scoring_service import recalculate_student_totals
 from app import schemas
 
 router = APIRouter(prefix="/events", tags=["Events & Transactions"])
 
+# ---------------------------
+# GET ALL EVENTS
+# ---------------------------
 @router.get("/", response_model=list[schemas.EventResponse])
 def get_events(db: Session = Depends(get_db)):
-    """
-    Retrieves a list of all defined events.
-    """
-    events = db.query(Event).all()
-    return events
+    """Retrieve all events"""
+    return db.query(Event).all()
 
+# ---------------------------
+# GET SINGLE EVENT
+# ---------------------------
 @router.get("/{event_id}", response_model=schemas.EventResponse)
 def get_event(event_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieves a single event by its ID.
-    """
     db_event = db.query(Event).filter(Event.id == event_id).first()
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
     return db_event
 
+# ---------------------------
+# CREATE EVENT
+# ---------------------------
 @router.post("/", response_model=schemas.EventResponse, status_code=status.HTTP_201_CREATED)
 def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
-    """
-    Creates a new event definition.
-    """
-    # Note: EventCreate uses the fields: title, category, date, participation_points, winner_points
-    # The Event model in the database is slightly different (name, description, points_awarded).
-    # Assuming schemas.EventCreate has been correctly aligned with the Event model:
-    db_event = Event(
-        name=event.title, # Assuming title maps to name
-        description=event.category, # Assuming category/description is passed here (you might need to adjust your schema/model if this is wrong)
-        points_awarded=event.participation_points # Assuming participation points is the main value
-        # This part requires a confirmation of your Event schema/model definition. 
-        # For now, I'm mapping the fields as best as possible.
-    )
-    # The above mapping is speculative based on the general structure; please ensure Event model
-    # fields match exactly the fields you intend to create here.
-    # A safer, temporary mapping:
-    # db_event = Event(**event.model_dump()) 
-    
-    # Since the Event model definition was not explicitly provided in the request context, 
-    # I will use a direct mapping of model_dump() for compatibility assuming the schemas match,
-    # but the previous response hinted at a discrepancy: 
-    # Event model: id, name, description, points_awarded
-    # EventCreate schema: title, category, date, participation_points, winner_points
-    # For now, I will use a direct mapping using kwargs:
-    
-    # Safest assumption: The schema fields match the model kwargs for Event.
     try:
-        db_event = Event(**event.model_dump(exclude_unset=True))
-    except Exception:
-        # Fallback to the properties used in the schema of the previous snippet
         db_event = Event(
-            name=event.title,
-            description=event.category,
-            points_awarded=event.participation_points
+            title=event.title,
+            category=event.category,
+            date=event.date,
+            participation_points=event.participation_points,
+            winner_points=event.winner_points,
+            description=event.description if hasattr(event, "description") else None
         )
-        
-    db.add(db_event)
-    db.commit()
-    db.refresh(db_event)
-    return db_event
+        db.add(db_event)
+        db.commit()
+        db.refresh(db_event)
+        return db_event
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create event: {e}")
 
+# ---------------------------
+# UPDATE EVENT
+# ---------------------------
 @router.put("/{event_id}", response_model=schemas.EventResponse)
 def update_event(event_id: int, event: schemas.EventCreate, db: Session = Depends(get_db)):
-    """
-    Updates an existing event definition.
-    """
     db_event = db.query(Event).filter(Event.id == event_id).first()
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
-    
-    # Update all fields from the schema
+
     update_data = event.model_dump(exclude_unset=True)
-    
-    # Map schema fields to model fields if necessary (as noted in create_event)
-    if 'title' in update_data:
-        update_data['name'] = update_data.pop('title')
-    if 'category' in update_data:
-        # Assuming category maps to description or another field
-        # We will skip direct mapping for now and rely on the model definition if possible
-        pass 
-    if 'participation_points' in update_data:
-        update_data['points_awarded'] = update_data.pop('participation_points')
-
-
     for key, value in update_data.items():
-        setattr(db_event, key, value)
-        
+        if hasattr(db_event, key):
+            setattr(db_event, key, value)
+
     db.commit()
     db.refresh(db_event)
     return db_event
 
+# ---------------------------
+# DELETE EVENT
+# ---------------------------
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_event(event_id: int, db: Session = Depends(get_db)):
-    """
-    Deletes an event. Note: Deleting an event does NOT automatically delete 
-    associated PointTransactions. A cleanup/recalculation service would be 
-    required for full data integrity, but for this MVP we only delete the event.
-    """
     db_event = db.query(Event).filter(Event.id == event_id).first()
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
-    
+
+    # Delete all associated point transactions first
+    transactions = db.query(PointTransaction).filter(PointTransaction.event_id == event_id).all()
+    for t in transactions:
+        db.delete(t)
+        recalculate_student_totals(db, t.student_id)
+
     db.delete(db_event)
     db.commit()
-    return {"ok": True} # HTTP 204 typically returns no content, but this is a common FastAPI pattern for 204
+    return {"ok": True}
 
+# ---------------------------
+# AWARD POINTS
+# ---------------------------
 @router.post("/award_points", response_model=schemas.PointTransactionResponse, status_code=status.HTTP_201_CREATED)
 def award_points(point_award: schemas.PointAward, db: Session = Depends(get_db)):
     """
-    Creates a new point transaction (audit record) and then updates the student's totals table.
+    Award points to a student for a given event.
     """
-    
-    # 1. Create the point transaction (Audit Record)
-    db_transaction = PointTransaction(
-        student_id=point_award.student_id,
-        event_id=point_award.event_id,
-        points=point_award.points,
-        category=point_award.category,
-        reason=point_award.reason
-    )
-    db.add(db_transaction)
-    
     try:
+        db_transaction = PointTransaction(
+            student_id=point_award.student_id,
+            event_id=point_award.event_id,
+            points=point_award.points,
+            category=point_award.category,
+            reason=point_award.reason
+        )
+        db.add(db_transaction)
         db.commit()
         db.refresh(db_transaction)
+
+        # Recalculate student totals
+        recalculate_student_totals(db, point_award.student_id)
+
+        return db_transaction
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Transaction failed: {e}"
-        )
-    
-    # 2. Recalculate and update student totals for performance (Aggregation Logic)
-    # This must be done *after* the transaction is committed.
-    recalculate_student_totals(db, point_award.student_id) # <-- CRITICAL CALL
-    
-    return db_transaction
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {e}")
+
+# ---------------------------
+# DELETE SINGLE POINT TRANSACTION
+# ---------------------------
+@router.delete("/transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
+    db_transaction = db.query(PointTransaction).filter(PointTransaction.id == transaction_id).first()
+    if not db_transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    student_id = db_transaction.student_id
+    db.delete(db_transaction)
+    db.commit()
+
+    # Recalculate totals for this student
+    recalculate_student_totals(db, student_id)
+
+    return {"ok": True}
+
+# ---------------------------
+# DELETE ALL POINT TRANSACTIONS FOR A STUDENT
+# ---------------------------
+@router.delete("/transactions/student/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_all_transactions_for_student(student_id: int, db: Session = Depends(get_db)):
+    db.query(PointTransaction).filter(PointTransaction.student_id == student_id).delete()
+    db.commit()
+
+    # Recalculate totals (will reset totals to 0)
+    recalculate_student_totals(db, student_id)
+
+    return {"ok": True}

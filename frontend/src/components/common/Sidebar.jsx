@@ -88,7 +88,10 @@ export default function Sidebar({ activePage, role = "student" }) {
     ? "/student/point-breakdown"
     : item.page === "Timeline"
     ? "/student/point-timeline"
+    : item.page === "AdminEvents"
+    ? "/admin/manage-events"
     : `/${item.page.replace(/\s+/g, "-").toLowerCase()}`;
+
 
 
             return (

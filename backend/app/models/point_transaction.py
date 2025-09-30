@@ -14,7 +14,7 @@ class PointTransaction(Base):
     points = Column(Integer)
     category = Column(String)
     reason = Column(String, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)  # ✅ Match schema
 
     student = relationship("Student", back_populates="point_transactions")
     event = relationship("Event")

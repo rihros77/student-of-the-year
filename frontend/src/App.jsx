@@ -5,8 +5,9 @@ import DashboardPage from "@/pages/DashboardPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AwardPoints from "@/pages/admin/AwardPoints";
+import ManageEvents from "@/pages/admin/ManageEvents"; // <-- Import new page
 import PointBreakdown from "@/pages/student/PointBreakdown";
-import PointTimeline from "@/pages/student/PointTimeline"; // <-- Import new page
+import PointTimeline from "@/pages/student/PointTimeline";
 import Layout from "@/components/common/Layout"; 
 
 function App() {
@@ -63,6 +64,18 @@ function App() {
             <ProtectedRoute>
               <Layout activePage="AwardPoints">
                 <AwardPoints />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Manage Events */}
+        <Route
+          path="/admin/manage-events"
+          element={
+            <ProtectedRoute>
+              <Layout activePage="AdminEvents">
+                <ManageEvents />
               </Layout>
             </ProtectedRoute>
           }

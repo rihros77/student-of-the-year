@@ -1,32 +1,27 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.models.student_total import StudentTotal
 from app.models.point_transaction import PointTransaction
-from typing import List, Dict
+from typing import Dict
 
-# Define the categories for aggregation (must match the point_transaction category column)
+# Define the categories for aggregation (must match the PointTransaction.category values)
 POINT_CATEGORIES = [
-    'academics', 
-    'sports', 
-    'cultural', 
-    'technical', 
+    'academics',
+    'sports',
+    'cultural',
+    'technical',
     'social'
 ]
 
 def recalculate_student_totals(db: Session, student_id: int):
     """
-    Recalculates all point totals for a given student from their point_transactions
-    and updates the StudentTotal table.
-    
-    This function should be called after every new point transaction.
+    Recalculate all point totals for a student based on current point transactions.
+    This ensures totals are always up-to-date, even if transactions are added, updated, or deleted.
     """
-    
-    # 1. Aggregate points using a single, efficient database query
-    # We group all transactions by category and sum the points.
-    
-    # Define the columns to aggregate (category and sum of points)
+    # Aggregate total points per category for this student
     query_results = db.query(
         PointTransaction.category,
-        func.sum(PointTransaction.points).label('total_points')
+        func.sum(PointTransaction.points).label("total_points")
     ).filter(
         PointTransaction.student_id == student_id
     ).group_by(
@@ -36,14 +31,14 @@ def recalculate_student_totals(db: Session, student_id: int):
     # Initialize totals dictionary
     totals: Dict[str, int] = {cat: 0 for cat in POINT_CATEGORIES}
     composite_sum = 0
-    
-    # 2. Map results back to the totals dictionary
+
+    # Fill totals from query
     for category, total_points in query_results:
         if category in totals:
             totals[category] = total_points
-            composite_sum += total_points # Simple sum for composite score
+            composite_sum += total_points
 
-    # 3. Get or create the StudentTotal record
+    # Get or create the StudentTotal record
     student_total = db.query(StudentTotal).filter(
         StudentTotal.student_id == student_id
     ).first()
@@ -52,16 +47,14 @@ def recalculate_student_totals(db: Session, student_id: int):
         student_total = StudentTotal(student_id=student_id)
         db.add(student_total)
 
-    # 4. Update the record with new totals
+    # Update totals
     student_total.academics_points = totals['academics']
     student_total.sports_points = totals['sports']
     student_total.cultural_points = totals['cultural']
     student_total.technical_points = totals['technical']
     student_total.social_points = totals['social']
-    student_total.composite_points = composite_sum 
+    student_total.composite_points = composite_sum
 
-    # 5. Commit changes to the totals table
+    # Commit changes
     db.commit()
     db.refresh(student_total)
-    
-    # Note: We do not return the object since this is a side-effect service function.
