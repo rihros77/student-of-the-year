@@ -4,6 +4,7 @@ import RegisterPage from "@/pages/RegisterPage";
 import DashboardPage from "@/pages/DashboardPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import AwardPoints from "@/pages/admin/AwardPoints"; // <-- Import your AwardPoints page
 
 function App() {
   return (
@@ -20,6 +21,16 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Award Points page */}
+        <Route
+          path="/admin/award-points"
+          element={
+            <ProtectedRoute>
+              <AwardPoints />
             </ProtectedRoute>
           }
         />

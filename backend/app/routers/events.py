@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.event import Event
 from app.models.point_transaction import PointTransaction
+from app.services.scoring_service import recalculate_student_totals # <-- NEW IMPORT
 from app import schemas
 
 router = APIRouter(prefix="/events", tags=["Events & Transactions"])
@@ -22,6 +23,11 @@ def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
 
 @router.post("/award_points", response_model=schemas.PointTransactionResponse, status_code=status.HTTP_201_CREATED)
 def award_points(point_award: schemas.PointAward, db: Session = Depends(get_db)):
+    """
+    Creates a new point transaction (audit record) and then updates the student's totals table.
+    """
+    
+    # 1. Create the point transaction (Audit Record)
     db_transaction = PointTransaction(
         student_id=point_award.student_id,
         event_id=point_award.event_id,
@@ -30,6 +36,19 @@ def award_points(point_award: schemas.PointAward, db: Session = Depends(get_db))
         reason=point_award.reason
     )
     db.add(db_transaction)
-    db.commit()
-    db.refresh(db_transaction)
+    
+    try:
+        db.commit()
+        db.refresh(db_transaction)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Transaction failed: {e}"
+        )
+    
+    # 2. Recalculate and update student totals for performance (Aggregation Logic)
+    # This must be done *after* the transaction is committed.
+    recalculate_student_totals(db, point_award.student_id) # <-- CRITICAL CALL
+    
     return db_transaction

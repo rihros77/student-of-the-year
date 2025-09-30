@@ -16,6 +16,18 @@ class DepartmentResponse(DepartmentBase):
     id: int
     model_config = Config
 
+# 👇 NEW: Schema for the StudentTotal table
+# This provides the detailed point breakdown for student profiles and leaderboards
+class StudentTotalResponse(BaseModel):
+    student_id: int
+    academics_points: int
+    sports_points: int
+    cultural_points: int
+    technical_points: int
+    social_points: int
+    composite_points: int
+    model_config = Config
+
 # -------------------- Student Schemas --------------------
 class StudentCreate(BaseModel):
     student_id: str
@@ -29,7 +41,11 @@ class StudentResponse(BaseModel):
     name: str
     year: int
     department: Optional[DepartmentResponse]  # Nested department object
-    points: int = 0  # Total points for leaderboard
+    
+    # 👇 UPDATED: Replaced 'points: int = 0' with the nested StudentTotal object
+    # This structure is much better for returning detailed data
+    total: Optional[StudentTotalResponse] = None 
+    
     model_config = Config
 
 # -------------------- Event Schemas --------------------

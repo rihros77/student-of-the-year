@@ -1,3 +1,4 @@
+# app/models/student.py (Updated)
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -13,5 +14,8 @@ class Student(Base):
     department = relationship("Department")
     year = Column(Integer)
 
-    # Add this relationship for point transactions
+    # Relationship for point transactions
     point_transactions = relationship("PointTransaction", back_populates="student")
+
+    # 👇 ADD THIS LINE for the one-to-one relationship with StudentTotal
+    total = relationship("StudentTotal", back_populates="student", uselist=False)

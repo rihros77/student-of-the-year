@@ -5,7 +5,7 @@ from typing import List
 
 from app.database import get_db
 from app.models.student import Student
-from app.models.point_transaction import PointTransaction
+from app.models.student_total import StudentTotal # <-- NEW IMPORT
 from app.schemas import StudentResponse
 
 router = APIRouter(
@@ -14,26 +14,26 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[StudentResponse])
-def get_leaderboard(db: Session = Depends(get_db)):
+def get_college_leaderboard(db: Session = Depends(get_db)):
     """
-    Returns a list of all students sorted by their total points in descending order.
+    Returns the college-wide leaderboard sorted by composite_points.
+    Reads from the efficient StudentTotal table.
     """
-    # Sum points for each student
+    # Query: Select Student and their composite points
     leaderboard = db.query(
         Student,
-        func.coalesce(func.sum(PointTransaction.points), 0).label("total_points")
-    ).outerjoin(
-        PointTransaction, Student.id == PointTransaction.student_id
-    ).group_by(
-        Student.id
+        StudentTotal.composite_points
+    ).join(
+        StudentTotal, Student.id == StudentTotal.student_id # JOIN with the totals table
     ).order_by(
-        func.sum(PointTransaction.points).desc()
+        StudentTotal.composite_points.desc() # Sort by the pre-calculated score
     ).all()
 
-    # Prepare results
+    # Prepare results for the Pydantic schema
     result = []
-    for student, total_points in leaderboard:
-        student.points = total_points
-        result.append(student)
+    for student_model, total_points in leaderboard:
+        # Pydantic schema expects a 'points' field, so we set it dynamically
+        student_model.points = total_points 
+        result.append(student_model)
 
     return result
