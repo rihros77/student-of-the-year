@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import Layout from "@/components/common/Layout";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { getStudentProfile } from "@/services/api";
 import { getStudentId } from "@/services/authService";
@@ -35,11 +34,9 @@ export default function DashboardPage() {
   // Admin view (no student data)
   if (!student && !studentId) {
     return (
-      <Layout activePage="Dashboard">
-        <p className="text-center mt-6 text-gray-700">
-          Welcome, Admin! Student-specific data is not available.
-        </p>
-      </Layout>
+      <p className="text-center mt-6 text-gray-700">
+        Welcome, Admin! Student-specific data is not available.
+      </p>
     );
   }
 
@@ -68,7 +65,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <Layout activePage="Dashboard">
+    <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatCard
           title="Total Points"
@@ -147,7 +144,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }
 

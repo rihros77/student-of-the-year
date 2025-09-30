@@ -84,7 +84,9 @@ export default function Sidebar({ activePage, role = "student" }) {
             const path =
               item.page === "AwardPoints"
                 ? "/admin/award-points"
-                : `/${item.page.replace(/\s+/g, "-").toLowerCase()}`; // convert spaces to dashes
+                : item.page === "Breakdown"
+                ? "/student/point-breakdown"
+                : `/${item.page.replace(/\s+/g, "-").toLowerCase()}`;
 
             return (
               <MenuItem
