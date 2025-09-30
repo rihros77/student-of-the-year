@@ -82,11 +82,14 @@ export default function Sidebar({ activePage, role = "student" }) {
 
             // Map page names to URLs
             const path =
-              item.page === "AwardPoints"
-                ? "/admin/award-points"
-                : item.page === "Breakdown"
-                ? "/student/point-breakdown"
-                : `/${item.page.replace(/\s+/g, "-").toLowerCase()}`;
+  item.page === "AwardPoints"
+    ? "/admin/award-points"
+    : item.page === "Breakdown"
+    ? "/student/point-breakdown"
+    : item.page === "Timeline"
+    ? "/student/point-timeline"
+    : `/${item.page.replace(/\s+/g, "-").toLowerCase()}`;
+
 
             return (
               <MenuItem

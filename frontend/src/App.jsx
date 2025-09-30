@@ -6,7 +6,8 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AwardPoints from "@/pages/admin/AwardPoints";
 import PointBreakdown from "@/pages/student/PointBreakdown";
-import Layout from "@/components/common/Layout"; // <-- Import Layout
+import PointTimeline from "@/pages/student/PointTimeline"; // <-- Import new page
+import Layout from "@/components/common/Layout"; 
 
 function App() {
   return (
@@ -38,6 +39,18 @@ function App() {
             <ProtectedRoute>
               <Layout activePage="Breakdown">
                 <PointBreakdown />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Student Point Timeline */}
+        <Route
+          path="/student/point-timeline"
+          element={
+            <ProtectedRoute>
+              <Layout activePage="Timeline">
+                <PointTimeline />
               </Layout>
             </ProtectedRoute>
           }
