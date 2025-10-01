@@ -1,9 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
-from datetime import datetime
 from app.database import Base
-from app.models.student import Student
-from app.models.event import Event
 
 class PointTransaction(Base):
     __tablename__ = "point_transactions"
@@ -14,7 +11,7 @@ class PointTransaction(Base):
     points = Column(Integer)
     category = Column(String)
     reason = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)  # ✅ Match schema
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)  # ✅ timezone-aware
 
     student = relationship("Student", back_populates="point_transactions")
     event = relationship("Event")
