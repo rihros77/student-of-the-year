@@ -24,7 +24,7 @@ export default function Layout({ children, activePage }) {
 
             {/* Main content container */}
             <div className="flex-1 flex flex-col">
-                {/* Header - PASSES THE DYNAMIC USERNAME */}
+                {/* Header - PASSES THE DYNAMIC USERNAME AND ACTIVE PAGE */}
                 <Header activePage={activePage} userName={userName} /> 
                 
                 {/* Page-specific content area */}
@@ -35,29 +35,39 @@ export default function Layout({ children, activePage }) {
 }
 
 /**
- * Header component, updated to use a dynamic username.
+ * Header component, updated to display the specific page title.
  */
 function Header({ activePage, userName = "User" }) {
-  return (
-    <header className="flex justify-between items-center bg-white border-b border-gray-300 px-6 py-4">
+    // Define the map of page names to their titles in the header
+    const pageTitles = {
+        "Dashboard": `Welcome Back, ${userName}!`,
+        "Manage Events": "Event Management Dashboard", // <-- Added the specific title here
+        // Add other page titles as needed
+    };
 
-      {/* Left part: Dynamic Welcome message for dashboard */}
-      <div className="text-xl font-semibold">
-        {activePage === "Dashboard" && `Welcome Back, ${userName}!`}
-      </div>
+    // Use the specific title if available, otherwise use a fallback or the active page name
+    const headerContent = pageTitles[activePage] || activePage; 
 
-      {/* Right part: avatar and bell */}
-      <div className="flex items-center gap-4">
-        <button className="hover:bg-gray-100 p-2 rounded-full transition duration-150">
-          🔔
-        </button>
+    return (
+        <header className="flex justify-between items-center bg-white border-b border-gray-300 px-6 py-4">
 
-        <img
-          src="https://i.pravatar.cc/39" 
-          alt="Profile"
-          className="h-10 w-10 rounded-full object-cover"
-        />
-      </div>
-    </header>
-  );
+            {/* Left part: Dynamic Welcome message or Page Title */}
+            <div className="text-xl font-bold text-gray-800">
+                {headerContent}
+            </div>
+
+            {/* Right part: avatar and bell */}
+            <div className="flex items-center gap-4">
+                <button className="hover:bg-gray-100 p-2 rounded-full transition duration-150">
+                    🔔
+                </button>
+
+                <img
+                    src="https://i.pravatar.cc/39" 
+                    alt="Profile"
+                    className="h-10 w-10 rounded-full object-cover"
+                />
+            </div>
+        </header>
+    );
 }

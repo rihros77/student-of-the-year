@@ -299,9 +299,8 @@ export default function ManageEvents() {
         <div className="min-h-screen bg-gray-50 p-4 sm:p-8 font-['Inter']">
             {ToastMessage}
             <div className="max-w-6xl mx-auto">
-                <h1 className="text-3xl font-extrabold text-gray-900 mb-2 text-center">Event Management Dashboard</h1>
-                <p className="text-center text-gray-600 mb-8">Create, view, and manage all point-eligible events.</p>
-
+                {/* Title removed from here to be placed in the Header component */}
+                
                 <div className="flex justify-end mb-6">
                     <button onClick={handleOpenCreate} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-indigo-500 transition transform active:scale-95">
                         <Plus size={20} /> Add New Event

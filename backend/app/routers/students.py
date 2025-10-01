@@ -22,7 +22,6 @@ def get_student(student_identifier: str, db: Session = Depends(get_db)):
     Retrieves a student using either their internal database ID (int)
     or their public-facing student_id (college roll number, str).
     """
-    
     # Try to determine if the identifier is the internal DB ID (integer)
     is_db_id = False
     try:
@@ -99,11 +98,11 @@ def get_student_timeline(student_id: int, db: Session = Depends(get_db)):
     if not db.query(Student).filter(Student.id == student_id).first():
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # 2. Fetch all transactions, ordered by timestamp (newest first)
+    # 2. Fetch all transactions, ordered by created_at (newest first)
     transactions = db.query(PointTransaction).filter(
         PointTransaction.student_id == student_id
     ).order_by(
-        PointTransaction.timestamp.desc()
+        PointTransaction.created_at.desc()   # ✅ FIXED HERE
     ).all()
     
     return transactions
@@ -115,16 +114,12 @@ def get_student_breakdown(student_id: int, db: Session = Depends(get_db)):
     Retrieves the aggregated point totals for a student.
     This powers the 'Points: Breakdown' feature (Student Sidebar).
     """
-    # 1. Check for student total record (uses the efficient denormalized table)
     breakdown = db.query(StudentTotal).filter(
         StudentTotal.student_id == student_id
     ).first()
     
-    # 2. Handle missing record or student
     if not breakdown:
-        # Check if the student ID is valid at all
         if db.query(Student).filter(Student.id == student_id).first():
-            # Student exists but has no transactions yet. Return zeroed default.
             return schemas.StudentTotalResponse(
                 student_id=student_id, 
                 academics_points=0, 
@@ -135,7 +130,6 @@ def get_student_breakdown(student_id: int, db: Session = Depends(get_db)):
                 composite_points=0
             )
         else:
-            # Student ID is invalid
             raise HTTPException(status_code=404, detail="Student not found")
 
     return breakdown
