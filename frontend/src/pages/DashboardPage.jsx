@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { getStudentProfile } from "@/services/api";
 import { getStudentId } from "@/services/authService";
@@ -18,9 +25,10 @@ export default function DashboardPage() {
 
       try {
         const data = await getStudentProfile(studentId);
+        console.log("✅ Full Student API response:", data); // Debug
         setStudent(data);
       } catch (err) {
-        console.error("Failed to fetch student data:", err);
+        console.error("❌ Failed to fetch student data:", err);
       } finally {
         setLoading(false);
       }
@@ -41,17 +49,24 @@ export default function DashboardPage() {
   }
 
   if (!student) {
-    return <p className="text-red-500 text-center mt-6">Failed to load student data.</p>;
+    return (
+      <p className="text-red-500 text-center mt-6">
+        Failed to load student data.
+      </p>
+    );
   }
 
-  const totals = student.totals || {
-    academics_points: 0,
-    sports_points: 0,
-    cultural_points: 0,
-    technical_points: 0,
-    social_points: 0,
-    composite_points: 0,
-  };
+  // ✅ Handle both cases: student has totals nested, or flat fields
+  const totals =
+    student.total || {
+      academics_points: student.academics_points || 0,
+      sports_points: student.sports_points || 0,
+      cultural_points: student.cultural_points || 0,
+      technical_points: student.technical_points || 0,
+      social_points: student.social_points || 0,
+      composite_points:
+        student.composite_points || student.total_points || 0,
+    };
 
   const badges = student.badges || [];
   const activities = student.transactions?.slice(0, 10) || [];
@@ -70,7 +85,10 @@ export default function DashboardPage() {
         <StatCard
           title="Total Points"
           value={totals.composite_points}
-          progress={Math.min(Math.round((totals.composite_points / 1000) * 100), 100)}
+          progress={Math.min(
+            Math.round((totals.composite_points / 1000) * 100),
+            100
+          )}
         />
         <StatCard
           title="Badges Earned"
@@ -88,19 +106,24 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl shadow-sm p-4 col-span-2">
           <h2 className="text-sm font-medium mb-4">Your Points Distribution</h2>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={pointsData}>
-              <defs>
-                <linearGradient id="pointsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#9F9FED" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#5B5B87" stopOpacity={1} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="category" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="points" fill="url(#pointsGradient)" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+  <BarChart data={pointsData}>
+    <defs>
+      <linearGradient id="pointsGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#9F9FED" stopOpacity={1} />
+        <stop offset="100%" stopColor="#5B5B87" stopOpacity={1} />
+      </linearGradient>
+    </defs>
+    <XAxis dataKey="category" />
+    <YAxis domain={[0, 100]} ticks={[20, 40, 60, 80]} />
+    <Tooltip />
+    <Bar
+      dataKey="points"
+      fill="url(#pointsGradient)"
+      radius={[6, 6, 0, 0]}
+    />
+  </BarChart>
+</ResponsiveContainer>
+
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-4">
@@ -110,10 +133,13 @@ export default function DashboardPage() {
               {activities.map((a) => (
                 <li key={a.id} className="flex flex-col text-sm">
                   <span>
-                    {a.icon || "📌"} {a.reason} {a.event_title ? `- ${a.event_title}` : ""}
+                    {a.icon || "📌"} {a.reason}{" "}
+                    {a.event_title ? `- ${a.event_title}` : ""}
                   </span>
                   <span className="text-gray-500 text-xs">
-                    {new Date(a.created_at).toLocaleString()}
+                    {a.created_at
+                      ? new Date(a.created_at).toLocaleString()
+                      : "No date"}
                   </span>
                 </li>
               ))}
@@ -132,7 +158,11 @@ export default function DashboardPage() {
                     className="bg-blue-100 px-2 py-1 rounded flex items-center gap-1"
                   >
                     {badge.icon_url && (
-                      <img src={badge.icon_url} alt={badge.name} className="w-5 h-5" />
+                      <img
+                        src={badge.icon_url}
+                        alt={badge.name}
+                        className="w-5 h-5"
+                      />
                     )}
                     <span className="text-xs font-semibold">{badge.name}</span>
                   </div>
@@ -165,3 +195,4 @@ function StatCard({ title, value, progress }) {
     </div>
   );
 }
+

@@ -24,20 +24,23 @@ async function apiFetch(url, options = {}) {
 }
 
 const CATEGORY_MAP = [
-  { key: "academics_points", label: "Academics", icon: BookOpen, color: "bg-blue-500" },
-  { key: "sports_points", label: "Sports", icon: Dumbbell, color: "bg-green-500" },
-  { key: "cultural_points", label: "Cultural", icon: Music, color: "bg-purple-500" },
-  { key: "technical_points", label: "Technical", icon: Code, color: "bg-red-500" },
-  { key: "social_points", label: "Social/Community", icon: Users, color: "bg-yellow-500" },
+  { key: "academics_points", label: "Academics", icon: BookOpen },
+  { key: "sports_points", label: "Sports", icon: Dumbbell },
+  { key: "cultural_points", label: "Cultural", icon: Music },
+  { key: "technical_points", label: "Technical", icon: Code },
+  { key: "social_points", label: "Social/Community", icon: Users },
 ];
 
-const PointBar = ({ value, maxValue, color }) => {
+const PointBar = ({ value, maxValue }) => {
   const width = maxValue > 0 ? (value / maxValue) * 100 : 0;
   return (
     <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden mt-1">
       <div
-        className={`h-full rounded-full transition-all duration-500 ease-out ${color}`}
-        style={{ width: `${width}%` }}
+        className="h-full rounded-full transition-all duration-500 ease-out"
+        style={{
+          width: `${width}%`,
+          background: `linear-gradient(to right, #5B5B87, #9F9FED)`,
+        }}
         title={`${value} points (${width.toFixed(1)}%)`}
       ></div>
     </div>
@@ -76,20 +79,19 @@ export default function PointBreakdown() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
-        {student.name}'s Point Breakdown
-      </h1>
-
-      <div className="mb-8 p-6 bg-indigo-600 text-white rounded-xl shadow-2xl flex justify-between items-center transform transition duration-500 hover:scale-[1.01]">
+      {/* Total Composite Score */}
+      <div className="mb-8 p-6 rounded-xl flex justify-between items-center transform transition duration-500 hover:scale-[1.01]"
+        style={{ backgroundColor: '#736CED', color: 'white' }}
+      >
         <div>
-          <p className="text-sm font-medium opacity-80">Total Composite Score</p>
+          <p className="text-sm font-medium opacity-90">Total Composite Score</p>
           <p className="text-5xl font-bold mt-1 tracking-tight">{totals.composite_points}</p>
         </div>
         <Star className="w-12 h-12 text-yellow-400 fill-yellow-400" />
       </div>
 
+      {/* Points by Category */}
       <div className="bg-white p-6 rounded-xl shadow-xl">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Points by Category</h2>
         <div className="space-y-4">
           {CATEGORY_MAP.map((category) => {
             const points = totals[category.key] || 0;
@@ -101,30 +103,18 @@ export default function PointBreakdown() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <category.icon
-                      className={`w-6 h-6 ${category.color} p-1 rounded-full text-white mr-3`}
+                      className="w-6 h-6 text-white p-1 rounded-full mr-3"
+                      style={{ background: `linear-gradient(to right, #5B5B87, #9F9FED)` }}
                     />
                     <span className="text-lg font-medium text-gray-700">{category.label}</span>
                   </div>
                   <span className="text-2xl font-bold text-gray-900">{points}</span>
                 </div>
-                <PointBar value={points} maxValue={maxCategoryPoints} color={category.color} />
+                <PointBar value={points} maxValue={maxCategoryPoints} />
               </div>
             );
           })}
         </div>
-      </div>
-
-      <div className="mt-8 p-4 bg-white rounded-xl shadow-md border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Student Information</h3>
-        <p>
-          <strong>Student Roll:</strong> {student.student_id}
-        </p>
-        <p>
-          <strong>Department:</strong> {student.department?.name || "N/A"}
-        </p>
-        <p>
-          <strong>Academic Year:</strong> {student.year}
-        </p>
       </div>
     </div>
   );

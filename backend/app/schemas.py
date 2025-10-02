@@ -77,6 +77,7 @@ class PointTransactionCreate(PointTransactionBase):
 class PointTransactionResponse(PointTransactionBase):
     id: int
     created_at: datetime
+    event: Optional[EventResponse] = None
     model_config = Config
 
 

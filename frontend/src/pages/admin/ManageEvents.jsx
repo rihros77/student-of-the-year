@@ -5,7 +5,7 @@ const API_BASE_URL = 'http://127.0.0.1:8000/api';
 const DEFAULT_EVENT_DATA = {
     title: '',
     category: 'academics',
-    date: new Date().toISOString().substring(0, 10), // YYYY-MM-DD
+    date: new Date().toISOString().substring(0, 10),
     participation_points: 10,
     winner_points: 50,
     description: '',
@@ -19,7 +19,6 @@ const CATEGORIES = [
     { value: 'social', label: 'Social' },
 ];
 
-/** Utility for API calls with readable errors */
 async function apiFetch(url, options = {}) {
     const token = "mock_admin_token"; 
     const headers = {
@@ -47,7 +46,6 @@ async function apiFetch(url, options = {}) {
     }
 }
 
-/** Toast hook */
 function useToast() {
     const [toast, setToast] = useState(null);
     const showToast = useCallback((message, type) => {
@@ -57,7 +55,6 @@ function useToast() {
     return { toast, showToast, setToast };
 }
 
-/** Event Modal */
 const EventFormModal = ({ isOpen, onClose, initialData, onSave }) => {
     const [formData, setFormData] = useState(initialData || DEFAULT_EVENT_DATA);
     const [loading, setLoading] = useState(false);
@@ -111,7 +108,7 @@ const EventFormModal = ({ isOpen, onClose, initialData, onSave }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex items-center justify-center p-4 ">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-100">
                 <div className="flex justify-between items-center border-b pb-3 mb-4">
                     <h3 className="text-xl font-bold text-gray-800">{isEditMode ? 'Edit Event' : 'Create New Event'}</h3>
@@ -208,7 +205,10 @@ const EventFormModal = ({ isOpen, onClose, initialData, onSave }) => {
                     <button
                         type="submit"
                         disabled={loading || !formData.title.trim() || formData.participation_points === null}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition transform active:scale-95"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition transform active:scale-95 text-white"
+                        style={{ backgroundColor: '#9F9FED' }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#736CED')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#9F9FED')}
                     >
                         {loading ? <Loader2 size={20} className="animate-spin" /> : (isEditMode ? <Edit3 size={20} /> : <Plus size={20} />)}
                         {loading ? 'Saving...' : (isEditMode ? 'Update Event' : 'Create Event')}
@@ -219,7 +219,6 @@ const EventFormModal = ({ isOpen, onClose, initialData, onSave }) => {
     );
 };
 
-/** Main Component */
 export default function ManageEvents() {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -257,7 +256,6 @@ export default function ManageEvents() {
             }
             fetchEvents();
         } catch (error) {
-            console.error("Event save failed:", error);
             showToast(`Failed to save event: ${error.message}`, 'error');
             throw error;
         }
@@ -279,7 +277,7 @@ export default function ManageEvents() {
         const Icon = toast.type === 'success' ? CheckCircle : (toast.type === 'error' ? AlertTriangle : List);
         const color = toast.type === 'success' ? 'bg-green-500' : (toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500');
         return (
-            <div className={`fixed bottom-4 right-4 z-50 p-4 rounded-lg text-white shadow-xl flex items-center gap-3 transition-all duration-300 transform ${color}`}>
+            <div className={`fixed bottom-4 right-4 z-50 p-4 rounded-lg text-white shadow-xl flex items-center gap-3 transition-all duration-300 transform ${color} `}>
                 <Icon size={20} />
                 <span>{toast.message}</span>
                 <button onClick={() => setToast(null)} className="ml-4 opacity-75 hover:opacity-100"><X size={16} /></button>
@@ -296,18 +294,22 @@ export default function ManageEvents() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-8 font-['Inter']">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
             {ToastMessage}
             <div className="max-w-6xl mx-auto">
-                {/* Title removed from here to be placed in the Header component */}
-                
                 <div className="flex justify-end mb-6">
-                    <button onClick={handleOpenCreate} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-indigo-500 transition transform active:scale-95">
+                    <button
+                        onClick={handleOpenCreate}
+                        className="flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition transform active:scale-95 text-white"
+                        style={{ backgroundColor: '#9F9FED' }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#736CED')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#9F9FED')}
+                    >
                         <Plus size={20} /> Add New Event
                     </button>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-[20px] border border-gray-300 overflow-hidden">
                     {loading ? (
                         <div className="p-8 text-center text-indigo-500 flex justify-center items-center gap-2">
                             <Loader2 size={24} className="animate-spin" /> Loading Events...
@@ -320,8 +322,8 @@ export default function ManageEvents() {
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                            <table className="min-w-full divide-y divide-gray-200 border border-gray-300 rounded-[20px] overflow-hidden">
+                                <thead className="bg-[#F0F0F0]">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Title</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Category</th>
