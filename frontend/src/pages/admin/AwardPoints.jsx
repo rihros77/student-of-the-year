@@ -190,7 +190,7 @@ export default function AwardPoints() {
   const selectedEvent = events.find(e => e.id === parseInt(awardData.event_id));
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-8 font-['Inter']">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <ToastMessage />
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">Admin Point Award Center</h1>
