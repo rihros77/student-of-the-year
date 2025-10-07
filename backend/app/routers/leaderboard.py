@@ -1,74 +1,149 @@
-from fastapi import APIRouter, Depends, HTTPException # Added HTTPException
-from sqlalchemy.orm import Session, joinedload # Added joinedload for efficient relationship loading
+# routers/leaderboard.py
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from typing import List
 
 from app.database import get_db
 from app.models.student import Student
 from app.models.student_total import StudentTotal
-from app.models.department import Department # NEW IMPORT
-from app.schemas import StudentResponse
+from app.models.department import Department
+from app.models.point_transaction import PointTransaction
+from app.schemas import StudentResponse, StudentTotalResponse
 
 router = APIRouter(
     prefix="/leaderboard",
     tags=["Leaderboard"]
 )
 
+def attach_wins(db: Session, students: List[Student]):
+    """
+    Compute wins for each student and attach to the student's total object.
+    Wins are the number of point_transactions with reason='winner'.
+    """
+    student_ids = [s.id for s in students]
+    if not student_ids:
+        return
+
+    # Query wins per student
+    wins_subq = (
+        db.query(
+            PointTransaction.student_id,
+            func.count(PointTransaction.id).label("wins")
+        )
+        .filter(PointTransaction.student_id.in_(student_ids))
+        .filter(PointTransaction.reason == "winner")
+        .group_by(PointTransaction.student_id)
+        .all()
+    )
+    wins_dict = {student_id: wins for student_id, wins in wins_subq}
+
+    for s in students:
+        if s.total:
+            s.total.wins = wins_dict.get(s.id, 0)
+
+# --------------------------- College Leaderboard ---------------------------
 @router.get("/", response_model=List[StudentResponse])
 def get_college_leaderboard(db: Session = Depends(get_db)):
-    """
-    Returns the college-wide leaderboard sorted by composite_points.
-    The nested 'total' object is loaded for detailed point data.
-    """
-    # Query only the Student model, join with StudentTotal for ordering, and 
-    # use joinedload to efficiently load the nested 'total' object and 'department'.
-    leaderboard = db.query(Student).join(
-        StudentTotal, Student.id == StudentTotal.student_id
-    ).order_by(
-        StudentTotal.composite_points.desc()
-    ).options(
-        joinedload(Student.department), # Eager load department details
-        joinedload(Student.total)      # Eager load the StudentTotal record (the 'total' field)
-    ).all()
+    students = (
+        db.query(Student)
+        .join(StudentTotal, Student.id == StudentTotal.student_id)
+        .order_by(
+            StudentTotal.composite_points.desc(),
+            StudentTotal.academics_points.desc(),
+            # Wins handled dynamically below
+            StudentTotal.technical_points.desc(),
+            Student.created_at.asc()
+        )
+        .options(
+            joinedload(Student.department),
+            joinedload(Student.total),
+            joinedload(Student.point_transactions)
+        )
+        .all()
+    )
 
-    return leaderboard # Pydantic converts the list of Student objects into StudentResponse list
+    attach_wins(db, students)
+    # Re-sort using wins dynamically for tie-breaker
+    students.sort(
+        key=lambda s: (
+            -(s.total.composite_points if s.total else 0),
+            -(s.total.academics_points if s.total else 0),
+            -(s.total.wins if s.total else 0),
+            -(s.total.technical_points if s.total else 0),
+            s.created_at
+        )
+    )
 
+    return students
+
+# --------------------------- Department Leaderboard ---------------------------
 @router.get("/department/{department_id}", response_model=List[StudentResponse])
 def get_department_leaderboard(department_id: int, db: Session = Depends(get_db)):
-    """
-    Returns the leaderboard for a specific department, sorted by composite_points.
-    """
-    # Verify Department exists before querying
     if not db.query(Department).filter(Department.id == department_id).first():
         raise HTTPException(status_code=404, detail="Department not found")
 
-    leaderboard = db.query(Student).join(
-        StudentTotal, Student.id == StudentTotal.student_id
-    ).filter(
-        Student.department_id == department_id  # Filter by department
-    ).order_by(
-        StudentTotal.composite_points.desc()
-    ).options(
-        joinedload(Student.department), # Eager load department details
-        joinedload(Student.total)      # Eager load the StudentTotal record
-    ).all()
-    
-    return leaderboard
+    students = (
+        db.query(Student)
+        .join(StudentTotal, Student.id == StudentTotal.student_id)
+        .filter(Student.department_id == department_id)
+        .order_by(
+            StudentTotal.composite_points.desc(),
+            StudentTotal.academics_points.desc(),
+            StudentTotal.technical_points.desc(),
+            Student.created_at.asc()
+        )
+        .options(
+            joinedload(Student.department),
+            joinedload(Student.total),
+            joinedload(Student.point_transactions)
+        )
+        .all()
+    )
 
+    attach_wins(db, students)
+    students.sort(
+        key=lambda s: (
+            -(s.total.composite_points if s.total else 0),
+            -(s.total.academics_points if s.total else 0),
+            -(s.total.wins if s.total else 0),
+            -(s.total.technical_points if s.total else 0),
+            s.created_at
+        )
+    )
+
+    return students
+
+# --------------------------- Class (Year) Leaderboard ---------------------------
 @router.get("/class/{year}", response_model=List[StudentResponse])
 def get_class_leaderboard(year: int, db: Session = Depends(get_db)):
-    """
-    Returns the leaderboard for a specific academic year (class), sorted by composite_points.
-    """
-    # No need to check for class/year existence; an empty list means no students in that year.
-    leaderboard = db.query(Student).join(
-        StudentTotal, Student.id == StudentTotal.student_id
-    ).filter(
-        Student.year == year  # Filter by academic year
-    ).order_by(
-        StudentTotal.composite_points.desc()
-    ).options(
-        joinedload(Student.department), # Eager load department details
-        joinedload(Student.total)      # Eager load the StudentTotal record
-    ).all()
+    students = (
+        db.query(Student)
+        .join(StudentTotal, Student.id == StudentTotal.student_id)
+        .filter(Student.year == year)
+        .order_by(
+            StudentTotal.composite_points.desc(),
+            StudentTotal.academics_points.desc(),
+            StudentTotal.technical_points.desc(),
+            Student.created_at.asc()
+        )
+        .options(
+            joinedload(Student.department),
+            joinedload(Student.total),
+            joinedload(Student.point_transactions)
+        )
+        .all()
+    )
 
-    return leaderboard
+    attach_wins(db, students)
+    students.sort(
+        key=lambda s: (
+            -(s.total.composite_points if s.total else 0),
+            -(s.total.academics_points if s.total else 0),
+            -(s.total.wins if s.total else 0),
+            -(s.total.technical_points if s.total else 0),
+            s.created_at
+        )
+    )
+
+    return students

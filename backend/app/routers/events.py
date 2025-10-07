@@ -1,19 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+# app/routers/events.py
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
+from typing import List
+
 from app.database import get_db
 from app.models.event import Event
 from app.models.point_transaction import PointTransaction
+from app.models.student import Student
+from app.models.user import User
 from app.services.scoring_service import recalculate_student_totals
 from app import schemas
+from app.dependencies import get_current_admin_user  # your admin dependency
 
 router = APIRouter(prefix="/events", tags=["Events & Transactions"])
+
+VALID_CATEGORIES = ['academics', 'sports', 'cultural', 'technical', 'social']
 
 # ---------------------------
 # GET ALL EVENTS
 # ---------------------------
 @router.get("/", response_model=list[schemas.EventResponse])
 def get_events(db: Session = Depends(get_db)):
-    """Retrieve all events"""
     return db.query(Event).all()
 
 # ---------------------------
@@ -21,32 +28,31 @@ def get_events(db: Session = Depends(get_db)):
 # ---------------------------
 @router.get("/{event_id}", response_model=schemas.EventResponse)
 def get_event(event_id: int, db: Session = Depends(get_db)):
-    db_event = db.query(Event).filter(Event.id == event_id).first()
-    if not db_event:
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    return db_event
+    return event
 
 # ---------------------------
 # CREATE EVENT
 # ---------------------------
 @router.post("/", response_model=schemas.EventResponse, status_code=status.HTTP_201_CREATED)
 def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
-    try:
-        db_event = Event(
-            title=event.title,
-            category=event.category,
-            date=event.date,
-            participation_points=event.participation_points,
-            winner_points=event.winner_points,
-            description=event.description if hasattr(event, "description") else None
-        )
-        db.add(db_event)
-        db.commit()
-        db.refresh(db_event)
-        return db_event
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to create event: {e}")
+    if event.category not in VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    db_event = Event(
+        title=event.title,
+        category=event.category,
+        date=event.date,
+        participation_points=event.participation_points,
+        winner_points=event.winner_points,
+        description=getattr(event, "description", None)
+    )
+    db.add(db_event)
+    db.commit()
+    db.refresh(db_event)
+    return db_event
 
 # ---------------------------
 # UPDATE EVENT
@@ -86,32 +92,86 @@ def delete_event(event_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 # ---------------------------
-# AWARD POINTS
+# AWARD POINTS (SINGLE STUDENT)
 # ---------------------------
 @router.post("/award_points", response_model=schemas.PointTransactionResponse, status_code=status.HTTP_201_CREATED)
-def award_points(point_award: schemas.PointAward, db: Session = Depends(get_db)):
-    """
-    Award points to a student for a given event.
-    """
-    try:
-        db_transaction = PointTransaction(
-            student_id=point_award.student_id,
-            event_id=point_award.event_id,
-            points=point_award.points,
-            category=point_award.category,
-            reason=point_award.reason
+def award_points(
+    point_award: schemas.PointAward,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    if point_award.category not in VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    event = db.query(Event).filter(Event.id == point_award.event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    student = db.query(Student).filter(Student.id == point_award.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    transaction = PointTransaction(
+        student_id=point_award.student_id,
+        event_id=point_award.event_id,
+        points=point_award.points,
+        category=point_award.category,
+        reason=point_award.reason,
+        awarded_by=admin_user.id
+    )
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)
+
+    # Update totals immediately
+    recalculate_student_totals(db, point_award.student_id)
+
+    return transaction
+
+# ---------------------------
+# AWARD POINTS (BULK)
+# ---------------------------
+@router.post("/award_points_bulk", status_code=status.HTTP_201_CREATED)
+def award_points_bulk(
+    student_ids: List[int] = Body(...),
+    event_id: int = Body(...),
+    points: int = Body(...),
+    category: str = Body(...),
+    reason: str = Body(...),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    if category not in VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    awarded_students = []
+    for student_id in student_ids:
+        student = db.query(Student).filter(Student.id == student_id).first()
+        if not student:
+            continue
+
+        transaction = PointTransaction(
+            student_id=student_id,
+            event_id=event_id,
+            points=points,
+            category=category,
+            reason=reason,
+            awarded_by=admin_user.id
         )
-        db.add(db_transaction)
-        db.commit()
-        db.refresh(db_transaction)
+        db.add(transaction)
+        db.flush()  # ensures transaction ID is set
 
-        # Recalculate student totals
-        recalculate_student_totals(db, point_award.student_id)
+        # Update totals for each student immediately
+        recalculate_student_totals(db, student_id)
 
-        return db_transaction
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Transaction failed: {e}")
+        awarded_students.append(student_id)
+
+    db.commit()
+    return {"awarded_to": awarded_students, "points": points, "category": category}
 
 # ---------------------------
 # DELETE SINGLE POINT TRANSACTION
@@ -126,7 +186,7 @@ def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     db.delete(db_transaction)
     db.commit()
 
-    # Recalculate totals for this student
+    # Update totals immediately
     recalculate_student_totals(db, student_id)
 
     return {"ok": True}
@@ -139,7 +199,7 @@ def delete_all_transactions_for_student(student_id: int, db: Session = Depends(g
     db.query(PointTransaction).filter(PointTransaction.student_id == student_id).delete()
     db.commit()
 
-    # Recalculate totals (will reset totals to 0)
+    # Update totals immediately
     recalculate_student_totals(db, student_id)
 
     return {"ok": True}

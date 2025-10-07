@@ -1,48 +1,40 @@
+# app/services/scoring_service.py
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.student_total import StudentTotal
 from app.models.point_transaction import PointTransaction
 from typing import Dict
 
-# Define the categories for aggregation (must match the PointTransaction.category values)
-POINT_CATEGORIES = [
-    'academics',
-    'sports',
-    'cultural',
-    'technical',
-    'social'
-]
+# Categories to aggregate points
+POINT_CATEGORIES = ['academics', 'sports', 'cultural', 'technical', 'social']
 
 def recalculate_student_totals(db: Session, student_id: int):
     """
     Recalculate all point totals for a student based on current point transactions.
-    This ensures totals are always up-to-date, even if transactions are added, updated, or deleted.
+    Totals are always up-to-date. Wins are computed dynamically in leaderboard queries.
     """
-    # Aggregate total points per category for this student
-    query_results = db.query(
-        PointTransaction.category,
-        func.sum(PointTransaction.points).label("total_points")
-    ).filter(
-        PointTransaction.student_id == student_id
-    ).group_by(
-        PointTransaction.category
-    ).all()
+    # Aggregate points per category
+    results = (
+        db.query(
+            PointTransaction.category,
+            func.sum(PointTransaction.points).label("total_points")
+        )
+        .filter(PointTransaction.student_id == student_id)
+        .group_by(PointTransaction.category)
+        .all()
+    )
 
-    # Initialize totals dictionary
+    # Initialize totals dict
     totals: Dict[str, int] = {cat: 0 for cat in POINT_CATEGORIES}
     composite_sum = 0
 
-    # Fill totals from query
-    for category, total_points in query_results:
+    for category, total_points in results:
         if category in totals:
             totals[category] = total_points
             composite_sum += total_points
 
-    # Get or create the StudentTotal record
-    student_total = db.query(StudentTotal).filter(
-        StudentTotal.student_id == student_id
-    ).first()
-
+    # Get or create StudentTotal record
+    student_total = db.query(StudentTotal).filter(StudentTotal.student_id == student_id).first()
     if not student_total:
         student_total = StudentTotal(student_id=student_id)
         db.add(student_total)

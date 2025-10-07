@@ -26,6 +26,7 @@ class StudentTotalResponse(BaseModel):
     technical_points: int
     social_points: int
     composite_points: int
+    wins: int = 0  # Dynamically attached in leaderboard
     model_config = Config
 
 
@@ -78,10 +79,7 @@ class StudentResponse(BaseModel):
     year: int
     department: Optional[DepartmentResponse] = None  # nested department
     total: Optional[StudentTotalResponse] = None     # nested totals
-
-    # ✅ FIX: Include student's recent point transactions (for dashboard)
     point_transactions: list[PointTransactionResponse] = []
-
     model_config = Config
 
 
