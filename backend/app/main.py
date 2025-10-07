@@ -6,18 +6,14 @@ from app.database import engine, Base
 # Import all models to ensure Base knows about them for table creation
 from app.models import department, student, event, point_transaction, user
 from app.routers import departments, students, events, leaderboard, auth
+from app.routers import snapshots, reveal  # ✅ added snapshots & reveal
 
 # -------------------- DB Setup --------------------
-# Function to create all tables defined in Base.metadata
 def create_db_tables():
-    # Base.metadata will gather all models imported above (via app.models)
-    # and create the corresponding tables in the database.
     Base.metadata.create_all(bind=engine)
 
-# Run the function to ensure tables exist on startup
 create_db_tables()
 # -------------------- End DB Setup --------------------
-
 
 app = FastAPI(
     title="Student of the Year",
@@ -25,24 +21,26 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# -------------------- CORS Middleware --------------------\
+# -------------------- CORS Middleware --------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],            # Allow all origins (for development)
+    allow_origins=["*"],            
     allow_credentials=True,
-    allow_methods=["*"],            # Allow GET, POST, PUT, DELETE etc.
-    allow_headers=["*"],            # Allow all headers
+    allow_methods=["*"],            
+    allow_headers=["*"],            
 )
 
-# -------------------- API Routers --------------------\
+# -------------------- API Routers --------------------
 # Prefix all routers with /api
 app.include_router(departments.router, prefix="/api")
 app.include_router(students.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(leaderboard.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(snapshots.router, prefix="/api")  # ✅ snapshots
+app.include_router(reveal.router, prefix="/api")     # ✅ reveal
 
-# -------------------- Root Endpoint --------------------\
+# -------------------- Root Endpoint --------------------
 @app.get("/", tags=["Root"])
 def read_root():
     return {"message": "Welcome to the Student of the Year API"}

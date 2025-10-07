@@ -90,8 +90,9 @@ export default function Sidebar({ activePage, role = "student" }) {
     ? "/student/point-timeline"
     : item.page === "AdminEvents"
     ? "/admin/manage-events"
+    : item.page === "FinalReveal"       // ✅ Add this mapping
+    ? "/admin/reveal"
     : `/${item.page.replace(/\s+/g, "-").toLowerCase()}`;
-
 
 
             return (

@@ -5,10 +5,11 @@ import DashboardPage from "@/pages/DashboardPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AwardPoints from "@/pages/admin/AwardPoints";
-import ManageEvents from "@/pages/admin/ManageEvents"; // <-- Import new page
+import ManageEvents from "@/pages/admin/ManageEvents";
+import RevealPage from "@/pages/admin/RevealPage"; // <-- New Reveal page
 import PointBreakdown from "@/pages/student/PointBreakdown";
 import PointTimeline from "@/pages/student/PointTimeline";
-import Layout from "@/components/common/Layout"; 
+import Layout from "@/components/common/Layout";
 
 function App() {
   return (
@@ -76,6 +77,18 @@ function App() {
             <ProtectedRoute>
               <Layout activePage="AdminEvents">
                 <ManageEvents />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Big-Screen Reveal */}
+        <Route
+          path="/admin/reveal"
+          element={
+            <ProtectedRoute>
+              <Layout activePage="Reveal">
+                <RevealPage />
               </Layout>
             </ProtectedRoute>
           }

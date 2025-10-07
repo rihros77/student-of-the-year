@@ -16,7 +16,6 @@ class DepartmentResponse(DepartmentBase):
     id: int
     model_config = Config
 
-
 # -------------------- Student Total (Points Breakdown) --------------------
 class StudentTotalResponse(BaseModel):
     student_id: int
@@ -26,9 +25,8 @@ class StudentTotalResponse(BaseModel):
     technical_points: int
     social_points: int
     composite_points: int
-    wins: int = 0  # Dynamically attached in leaderboard
+    wins: Optional[int] = 0  # ✅ Add dynamic wins field
     model_config = Config
-
 
 # -------------------- Event Schemas --------------------
 class EventBase(BaseModel):
@@ -45,7 +43,6 @@ class EventCreate(EventBase):
 class EventResponse(EventBase):
     id: int
     model_config = Config
-
 
 # -------------------- Point Transaction Schemas --------------------
 class PointTransactionBase(BaseModel):
@@ -64,8 +61,7 @@ class PointTransactionResponse(PointTransactionBase):
     event: Optional[EventResponse] = None
     model_config = Config
 
-
-# -------------------- Student Schemas (FIX APPLIED HERE) --------------------
+# -------------------- Student Schemas --------------------
 class StudentCreate(BaseModel):
     student_id: str
     name: str
@@ -78,10 +74,9 @@ class StudentResponse(BaseModel):
     name: str
     year: int
     department: Optional[DepartmentResponse] = None  # nested department
-    total: Optional[StudentTotalResponse] = None     # nested totals
+    total: Optional[StudentTotalResponse] = None      # nested totals
     point_transactions: list[PointTransactionResponse] = []
     model_config = Config
-
 
 # -------------------- Additional Payloads --------------------
 class PointAward(BaseModel):
@@ -91,7 +86,6 @@ class PointAward(BaseModel):
     category: str
     reason: Optional[str] = None
     model_config = Config
-
 
 # -------------------- User Schemas --------------------
 class UserCreate(BaseModel):
@@ -108,3 +102,20 @@ class UserResponse(BaseModel):
     username: str
     role: str
     model_config = Config
+
+# -------------------- Final Snapshot Schema --------------------
+class FinalSnapshotResponse(BaseModel):
+    id: int
+    student_id: int
+    composite_points: int
+    academics_points: int
+    sports_points: int
+    cultural_points: int
+    technical_points: int
+    social_points: int
+    rank: int
+    revealed: bool
+    created_at: Optional[datetime]
+
+    class Config:
+        orm_mode = True
