@@ -29,23 +29,6 @@ class StudentTotalResponse(BaseModel):
     model_config = Config
 
 
-# -------------------- Student Schemas --------------------
-class StudentCreate(BaseModel):
-    student_id: str
-    name: str
-    year: int
-    department_id: int
-
-class StudentResponse(BaseModel):
-    id: int
-    student_id: str
-    name: str
-    year: int
-    department: Optional[DepartmentResponse] = None  # nested department
-    total: Optional[StudentTotalResponse] = None     # nested totals
-    model_config = Config
-
-
 # -------------------- Event Schemas --------------------
 class EventBase(BaseModel):
     title: str
@@ -78,6 +61,27 @@ class PointTransactionResponse(PointTransactionBase):
     id: int
     created_at: datetime
     event: Optional[EventResponse] = None
+    model_config = Config
+
+
+# -------------------- Student Schemas (FIX APPLIED HERE) --------------------
+class StudentCreate(BaseModel):
+    student_id: str
+    name: str
+    year: int
+    department_id: int
+
+class StudentResponse(BaseModel):
+    id: int
+    student_id: str
+    name: str
+    year: int
+    department: Optional[DepartmentResponse] = None  # nested department
+    total: Optional[StudentTotalResponse] = None     # nested totals
+
+    # ✅ FIX: Include student's recent point transactions (for dashboard)
+    point_transactions: list[PointTransactionResponse] = []
+
     model_config = Config
 
 

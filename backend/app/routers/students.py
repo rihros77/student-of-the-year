@@ -1,28 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models.student import Student
 from app.models.department import Department
-# --- NEW IMPORTS for Point Features ---
 from app.models.point_transaction import PointTransaction
 from app.models.student_total import StudentTotal
-# --------------------------------------
 from app import schemas
 
 router = APIRouter(prefix="/students", tags=["students"])
 
+# -------------------- GET ALL STUDENTS --------------------
 @router.get("/", response_model=list[schemas.StudentResponse])
 def get_students(db: Session = Depends(get_db)):
     students = db.query(Student).all()
     return students
 
+# -------------------- GET STUDENT (with totals + transactions) --------------------
 @router.get("/{student_identifier}", response_model=schemas.StudentResponse)
 def get_student(student_identifier: str, db: Session = Depends(get_db)):
     """
-    Retrieves a student using either their internal database ID (int)
-    or their public-facing student_id (college roll number, str).
+    Retrieves a student using either their internal database ID or roll number.
+    Eagerly loads their total points and recent point transactions for dashboard/profile display.
     """
-    # Try to determine if the identifier is the internal DB ID (integer)
+    # Try to parse identifier as DB ID
     is_db_id = False
     try:
         db_id = int(student_identifier)
@@ -30,18 +30,28 @@ def get_student(student_identifier: str, db: Session = Depends(get_db)):
     except ValueError:
         pass
 
+    # Build base query with eager loading
+    query = db.query(Student).options(
+        joinedload(Student.total),  # eager load StudentTotal
+        joinedload(Student.point_transactions)  # eager load transactions
+    )
+
+    # Filter by ID or roll number
     if is_db_id:
-        # Case 1: Search by internal database ID (Primary Key)
-        student = db.query(Student).filter(Student.id == db_id).first()
+        student = query.filter(Student.id == db_id).first()
     else:
-        # Case 2: Search by the public-facing student_id (e.g., 'cs102')
-        student = db.query(Student).filter(Student.student_id.ilike(student_identifier)).first()
-    
+        student = query.filter(Student.student_id.ilike(student_identifier)).first()
+
     if not student:
         raise HTTPException(status_code=404, detail="Student not found by ID or Roll Number")
-    
+
+    # Sort and limit point_transactions manually (since joinedload doesn't support .limit/.order_by)
+    student.point_transactions.sort(key=lambda x: x.created_at or 0, reverse=True)
+    student.point_transactions = student.point_transactions[:10]  # Limit to 10 recent
+
     return student
 
+# -------------------- CREATE STUDENT --------------------
 @router.post("/", response_model=schemas.StudentResponse, status_code=201)
 def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)):
     db_department = db.query(Department).filter(Department.id == student.department_id).first()
@@ -59,6 +69,7 @@ def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)
     db.refresh(db_student)
     return db_student
 
+# -------------------- UPDATE STUDENT --------------------
 @router.put("/{student_id}", response_model=schemas.StudentResponse)
 def update_student(student_id: int, student: schemas.StudentCreate, db: Session = Depends(get_db)):
     db_student = db.query(Student).filter(Student.id == student_id).first()
@@ -77,6 +88,7 @@ def update_student(student_id: int, student: schemas.StudentCreate, db: Session 
     db.refresh(db_student)
     return db_student
 
+# -------------------- DELETE STUDENT --------------------
 @router.delete("/{student_id}", status_code=204)
 def delete_student(student_id: int, db: Session = Depends(get_db)):
     db_student = db.query(Student).filter(Student.id == student_id).first()
@@ -87,47 +99,35 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"ok": True}
 
-# -------------------- NEW ENDPOINT: POINTS TIMELINE --------------------
+# -------------------- POINTS TIMELINE --------------------
 @router.get("/{student_id}/timeline", response_model=list[schemas.PointTransactionResponse])
 def get_student_timeline(student_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieves the chronological list of all point transactions for a student.
-    This powers the 'Points: Timeline' feature (Student Sidebar).
-    """
-    # 1. Verify student existence
     if not db.query(Student).filter(Student.id == student_id).first():
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # 2. Fetch all transactions, ordered by created_at (newest first)
-    transactions = db.query(PointTransaction).filter(
-        PointTransaction.student_id == student_id
-    ).order_by(
-        PointTransaction.created_at.desc()   # ✅ FIXED HERE
-    ).all()
-    
+    transactions = (
+        db.query(PointTransaction)
+        .filter(PointTransaction.student_id == student_id)
+        .order_by(PointTransaction.created_at.desc())
+        .all()
+    )
     return transactions
 
-# -------------------- NEW ENDPOINT: POINTS BREAKDOWN --------------------
+# -------------------- POINTS BREAKDOWN --------------------
 @router.get("/{student_id}/breakdown", response_model=schemas.StudentTotalResponse)
 def get_student_breakdown(student_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieves the aggregated point totals for a student.
-    This powers the 'Points: Breakdown' feature (Student Sidebar).
-    """
-    breakdown = db.query(StudentTotal).filter(
-        StudentTotal.student_id == student_id
-    ).first()
-    
+    breakdown = db.query(StudentTotal).filter(StudentTotal.student_id == student_id).first()
+
     if not breakdown:
         if db.query(Student).filter(Student.id == student_id).first():
             return schemas.StudentTotalResponse(
-                student_id=student_id, 
-                academics_points=0, 
-                sports_points=0, 
-                cultural_points=0, 
-                technical_points=0, 
-                social_points=0, 
-                composite_points=0
+                student_id=student_id,
+                academics_points=0,
+                sports_points=0,
+                cultural_points=0,
+                technical_points=0,
+                social_points=0,
+                composite_points=0,
             )
         else:
             raise HTTPException(status_code=404, detail="Student not found")
