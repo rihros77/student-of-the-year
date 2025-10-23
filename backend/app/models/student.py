@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
 from app.models.department import Department
@@ -20,3 +21,4 @@ class Student(Base):
 
     # ✅ CONFIRMED: Relationship to the calculated totals
     total = relationship("StudentTotal", back_populates="student", uselist=False)
+    created_at = Column(DateTime, default=datetime.utcnow)  # ✅ Added

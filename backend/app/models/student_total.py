@@ -26,6 +26,8 @@ class StudentTotal(Base):
     
     # Timestamp to track when the totals were last updated
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    wins = Column(Integer, default=0)
+
 
     # Relationship back to Student model
     student = relationship("Student", back_populates="total", uselist=False)

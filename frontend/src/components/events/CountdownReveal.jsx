@@ -133,9 +133,9 @@ export default function CountdownReveal() {
                 {CountdownDisplay}
             </div>
             
-            <div className="absolute bottom-4 left-4 text-xs text-gray-400">
+            {/* <div className="absolute bottom-4 left-4 text-xs text-gray-400">
                 Endpoint: {API_BASE_URL}/reveal/ (POST)
-            </div>
+            </div> */}
         </div>
     );
 }
