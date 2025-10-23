@@ -9,6 +9,7 @@ import ManageEvents from "@/pages/admin/ManageEvents";
 import RevealPage from "@/pages/admin/RevealPage"; // <-- New Reveal page
 import PointBreakdown from "@/pages/student/PointBreakdown";
 import PointTimeline from "@/pages/student/PointTimeline";
+import AchievementsPage from "@/pages/student/Achievements";
 import Layout from "@/components/common/Layout";
 
 function App() {
@@ -53,6 +54,18 @@ function App() {
             <ProtectedRoute>
               <Layout activePage="Timeline">
                 <PointTimeline />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Student Achievements */}
+        <Route
+          path="/student/achievements" // Choose an appropriate path
+          element={
+            <ProtectedRoute>
+              <Layout activePage="Achievements">
+                <AchievementsPage />
               </Layout>
             </ProtectedRoute>
           }
