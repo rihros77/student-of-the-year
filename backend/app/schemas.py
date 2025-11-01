@@ -119,3 +119,16 @@ class FinalSnapshotResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+# -------------------- Achievement Schemas --------------------
+class AchievementResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None  # Mapped from transaction 'reason'
+    category: Optional[str] = None  
+    event_id: Optional[int] = None    # Added event_id for detailed context
+    points: int                       # 🛠️ FIX: Renamed from 'points_awarded' to 'points'
+    date: Optional[datetime] = None
+    position: Optional[str] = None    # 🛠️ FIX: Added position field
+
+    model_config = Config
