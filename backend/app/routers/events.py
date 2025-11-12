@@ -203,3 +203,61 @@ def delete_all_transactions_for_student(student_id: int, db: Session = Depends(g
     recalculate_student_totals(db, student_id)
 
     return {"ok": True}
+
+
+# ---------------------------
+# STUDENT PARTICIPATION (no admin auth)
+# ---------------------------
+@router.post("/participate", status_code=status.HTTP_201_CREATED)
+def participate_in_event(data: dict = Body(...), db: Session = Depends(get_db)):
+    try:
+        student_id = data.get("student_id")
+        event_id = data.get("event_id")
+
+        if not student_id or not event_id:
+            raise HTTPException(status_code=400, detail="Missing student_id or event_id")
+
+        event = db.query(Event).filter(Event.id == event_id).first()
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+
+        student = db.query(Student).filter(Student.id == student_id).first()
+        if not student:
+            raise HTTPException(status_code=404, detail="Student not found")
+
+        existing = (
+            db.query(PointTransaction)
+            .filter(
+                PointTransaction.student_id == student_id,
+                PointTransaction.event_id == event_id,
+                PointTransaction.reason == "Student opted to participate",
+            )
+            .first()
+        )
+        if existing:
+            raise HTTPException(status_code=400, detail="Already registered for this event")
+
+        # Use a fallback category just in case
+        category = event.category if event.category in VALID_CATEGORIES else "academics"
+
+        transaction = PointTransaction(
+            student_id=student_id,
+            event_id=event_id,
+            points=0,
+            category=category,
+            reason="Student opted to participate",
+        )
+
+        db.add(transaction)
+        db.commit()
+
+        try:
+            recalculate_student_totals(db, student_id)
+        except Exception as e:
+            print("❌ ERROR recalculating totals:", e)
+
+        return {"message": "Participation registered successfully"}
+
+    except Exception as e:
+        print("❌ PARTICIPATION ERROR:", e)
+        raise HTTPException(status_code=500, detail=str(e))

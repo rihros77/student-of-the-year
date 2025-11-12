@@ -4,12 +4,19 @@ import RegisterPage from "@/pages/RegisterPage";
 import DashboardPage from "@/pages/DashboardPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+
+// Admin Pages
 import AwardPoints from "@/pages/admin/AwardPoints";
 import ManageEvents from "@/pages/admin/ManageEvents";
-import RevealPage from "@/pages/admin/RevealPage"; // <-- New Reveal page
+import RevealPage from "@/pages/admin/RevealPage";
+
+// Student Pages
 import PointBreakdown from "@/pages/student/PointBreakdown";
 import PointTimeline from "@/pages/student/PointTimeline";
 import AchievementsPage from "@/pages/student/Achievements";
+import EventsPage from "@/pages/student/Events"; // <-- New Events page
+
+// Common Layout
 import Layout from "@/components/common/Layout";
 
 function App() {
@@ -61,11 +68,23 @@ function App() {
 
         {/* Student Achievements */}
         <Route
-          path="/student/achievements" // Choose an appropriate path
+          path="/student/achievements"
           element={
             <ProtectedRoute>
               <Layout activePage="Achievements">
                 <AchievementsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Student Events */}
+        <Route
+          path="/student/events"
+          element={
+            <ProtectedRoute>
+              <Layout activePage="Events">
+                <EventsPage />
               </Layout>
             </ProtectedRoute>
           }

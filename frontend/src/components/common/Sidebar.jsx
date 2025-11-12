@@ -81,20 +81,23 @@ export default function Sidebar({ activePage, role = "student" }) {
             const Icon = item.icon;
 
             // Map page names to URLs
-            const path =
-              item.page === "Achievements" // <-- ADD THIS NEW LINE
-                ? "/student/achievements"   // <-- This is the URL path
-                : item.page === "AwardPoints"
-                ? "/admin/award-points"
-                : item.page === "Breakdown"
-                ? "/student/point-breakdown"
-                : item.page === "Timeline"
-                ? "/student/point-timeline"
-                : item.page === "AdminEvents"
-                ? "/admin/manage-events"
-                : item.page === "FinalReveal"
-                ? "/admin/reveal"
-                : `/${item.page.replace(/\s+/g, "-").toLowerCase()}`;
+           const path =
+  item.page === "Achievements"
+    ? "/student/achievements"
+    : item.page === "Events"          // <-- add this line
+    ? "/student/events"               // <-- the URL path for Events page
+    : item.page === "AwardPoints"
+    ? "/admin/award-points"
+    : item.page === "Breakdown"
+    ? "/student/point-breakdown"
+    : item.page === "Timeline"
+    ? "/student/point-timeline"
+    : item.page === "AdminEvents"
+    ? "/admin/manage-events"
+    : item.page === "FinalReveal"
+    ? "/admin/reveal"
+    : `/${item.page.replace(/\s+/g, "-").toLowerCase()}`;
+
 
             return (
               <MenuItem
