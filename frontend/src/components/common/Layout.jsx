@@ -3,6 +3,7 @@
 import React from "react";
 import Sidebar from "./Sidebar";
 import { useAuth } from "@/context/AuthContext"; // Import the useAuth hook
+import NotificationBell from "@/components/common/NotificationBell";
 
 /**
  * Main application layout component that wraps all protected pages.
@@ -58,16 +59,14 @@ function Header({ activePage, userName = "User" }) {
 
             {/* Right part: avatar and bell */}
             <div className="flex items-center gap-4">
-                <button className="hover:bg-gray-100 p-2 rounded-full transition duration-150">
-                    🔔
-                </button>
+  <NotificationBell /> {/* <-- Add this here */}
+  <img
+    src="https://i.pravatar.cc/39"
+    alt="Profile"
+    className="h-10 w-10 rounded-full object-cover"
+  />
+</div>
 
-                <img
-                    src="https://i.pravatar.cc/39" 
-                    alt="Profile"
-                    className="h-10 w-10 rounded-full object-cover"
-                />
-            </div>
         </header>
     );
 }

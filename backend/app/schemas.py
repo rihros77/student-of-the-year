@@ -132,3 +132,17 @@ class AchievementResponse(BaseModel):
     position: Optional[str] = None    # 🛠️ FIX: Added position field
 
     model_config = Config
+
+# -------------------- Participation Logs (Admin) --------------------
+class ParticipationLog(BaseModel):
+    student_name: str
+    event_title: str
+    timestamp: str
+
+    model_config = Config
+
+# -------------------- Participation Request (Student) --------------------
+class ParticipationRequest(BaseModel):
+    student_id: int
+    event_id: int
+    model_config = Config

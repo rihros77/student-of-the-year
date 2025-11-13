@@ -35,18 +35,31 @@ const EventsPage = () => {
 
   // ✅ Handle participation
   const handleParticipate = async (eventId) => {
+  if (!studentId) {
+    alert("❌ Student ID not found. Please log in.");
+    return;
+  }
+
+  // Convert both IDs to integers
+  const payload = {
+    student_id: Number(studentId),
+    event_id: Number(eventId),
+  };
+
+  console.log("Sending participation:", payload); // ✅ Debug
+
   try {
-    await axios.post("http://localhost:8000/api/events/participate", {
-      student_id: studentId,
-      event_id: eventId,
+    await axios.post("http://localhost:8000/api/events/participate", payload, {
+      headers: { "Content-Type": "application/json" },
     });
     alert("✅ Participation registered! Admin will note this.");
   } catch (err) {
-    console.error(err);
-    alert("❌ Failed to register participation. Try again later.");
+    console.error(err.response || err);
+    const message =
+      err.response?.data?.detail || "Failed to register participation. Try again later.";
+    alert(`❌ ${message}`);
   }
 };
-
 
   // ✅ Sort events
   const now = new Date();
