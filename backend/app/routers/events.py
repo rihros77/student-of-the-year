@@ -4,35 +4,38 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List
 
-from app.schemas import ParticipationLog
 from app.database import get_db
 from app.models.event import Event
 from app.models.point_transaction import PointTransaction
 from app.models.student import Student
 from app.models.user import User
+from app.models.admin_notification_status import AdminNotificationStatus
 from app.services.scoring_service import recalculate_student_totals
+from app.dependencies import get_current_admin_user
 from app import schemas
-from app.dependencies import get_current_admin_user  # Admin-only dependency
 
 router = APIRouter(prefix="/events", tags=["Events & Transactions"])
 
 VALID_CATEGORIES = ["academics", "sports", "cultural", "technical", "social"]
 
 # ---------------------------
-# STATIC ROUTES FIRST
+# STATIC / ADMIN ROUTES
 # ---------------------------
 
-# ---------------------------
-# GET PARTICIPATION LOGS (Admin-only)
-# ---------------------------
-# Temporary testing: remove admin dependency
 @router.get("/participation_logs")
-def get_participation_logs(db: Session = Depends(get_db)):
+def get_participation_logs(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user),
+):
     logs = (
-        db.query(PointTransaction, Student, Event)
+        db.query(PointTransaction, Student, Event, AdminNotificationStatus)
         .join(Student, PointTransaction.student_id == Student.id)
         .join(Event, PointTransaction.event_id == Event.id)
-        .filter(PointTransaction.reason == "Student opted to participate")
+        .join(AdminNotificationStatus, AdminNotificationStatus.point_transaction_id == PointTransaction.id)
+        .filter(
+            PointTransaction.reason == "Student opted to participate",
+            AdminNotificationStatus.seen == False  # 👈 ONLY unseen notifications!
+        )
         .order_by(desc(PointTransaction.id))
         .limit(20)
         .all()
@@ -44,13 +47,15 @@ def get_participation_logs(db: Session = Depends(get_db)):
             "event_title": e.title,
             "timestamp": str(p.created_at),
         }
-        for p, s, e in logs
+        for p, s, e, notif in logs
     ]
 
 
+
 # ---------------------------
-# STUDENT PARTICIPATION (no admin auth)
+# STUDENT PARTICIPATION
 # ---------------------------
+
 @router.post("/participate", status_code=status.HTTP_201_CREATED)
 def participate_in_event(
     data: schemas.ParticipationRequest = Body(...),
@@ -81,6 +86,7 @@ def participate_in_event(
 
     category = event.category if event.category in VALID_CATEGORIES else "academics"
 
+    # 1️⃣ Create point transaction
     transaction = PointTransaction(
         student_id=student_id,
         event_id=event_id,
@@ -90,13 +96,26 @@ def participate_in_event(
     )
     db.add(transaction)
     db.commit()
+    db.refresh(transaction)
+
+    # 2️⃣ Create admin notification record
+    notification = AdminNotificationStatus(
+        point_transaction_id=transaction.id,
+        seen=False
+    )
+    db.add(notification)
+    db.commit()
+
+    # 3️⃣ Recalculate student totals
     recalculate_student_totals(db, student_id)
 
     return {"message": "Participation registered successfully"}
 
+
 # ---------------------------
 # AWARD POINTS TO SINGLE STUDENT
 # ---------------------------
+
 @router.post("/award_points", response_model=schemas.PointTransactionResponse, status_code=status.HTTP_201_CREATED)
 def award_points(
     point_award: schemas.PointAward,
@@ -129,9 +148,11 @@ def award_points(
     recalculate_student_totals(db, point_award.student_id)
     return transaction
 
+
 # ---------------------------
 # AWARD POINTS IN BULK
 # ---------------------------
+
 @router.post("/award_points_bulk", status_code=status.HTTP_201_CREATED)
 def award_points_bulk(
     student_ids: List[int] = Body(...),
@@ -165,16 +186,18 @@ def award_points_bulk(
             awarded_by=admin_user.id,
         )
         db.add(transaction)
-        db.flush()  # To get the ID if needed
+        db.flush()
         recalculate_student_totals(db, student_id)
         awarded_students.append(student_id)
 
     db.commit()
     return {"awarded_to": awarded_students, "points": points, "category": category}
 
+
 # ---------------------------
-# DELETE SINGLE POINT TRANSACTION
+# DELETE POINT TRANSACTIONS
 # ---------------------------
+
 @router.delete("/transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     transaction = db.query(PointTransaction).filter(PointTransaction.id == transaction_id).first()
@@ -187,9 +210,7 @@ def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     recalculate_student_totals(db, student_id)
     return {"ok": True}
 
-# ---------------------------
-# DELETE ALL POINT TRANSACTIONS FOR A STUDENT
-# ---------------------------
+
 @router.delete("/transactions/student/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_all_transactions_for_student(student_id: int, db: Session = Depends(get_db)):
     db.query(PointTransaction).filter(PointTransaction.student_id == student_id).delete(synchronize_session="fetch")
@@ -197,13 +218,15 @@ def delete_all_transactions_for_student(student_id: int, db: Session = Depends(g
     recalculate_student_totals(db, student_id)
     return {"ok": True}
 
+
 # ---------------------------
-# CRUD FOR EVENTS (DYNAMIC ROUTES LAST)
+# CRUD FOR EVENTS
 # ---------------------------
 
 @router.get("/", response_model=list[schemas.EventResponse])
 def get_events(db: Session = Depends(get_db)):
     return db.query(Event).all()
+
 
 @router.get("/{event_id}", response_model=schemas.EventResponse)
 def get_event(event_id: int, db: Session = Depends(get_db)):
@@ -211,6 +234,7 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     return event
+
 
 @router.post("/", response_model=schemas.EventResponse, status_code=status.HTTP_201_CREATED)
 def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
@@ -230,6 +254,7 @@ def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
     db.refresh(db_event)
     return db_event
 
+
 @router.put("/{event_id}", response_model=schemas.EventResponse)
 def update_event(event_id: int, event: schemas.EventCreate, db: Session = Depends(get_db)):
     db_event = db.query(Event).filter(Event.id == event_id).first()
@@ -245,13 +270,13 @@ def update_event(event_id: int, event: schemas.EventCreate, db: Session = Depend
     db.refresh(db_event)
     return db_event
 
+
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_event(event_id: int, db: Session = Depends(get_db)):
     db_event = db.query(Event).filter(Event.id == event_id).first()
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    # Delete associated point transactions first
     transactions = db.query(PointTransaction).filter(PointTransaction.event_id == event_id).all()
     for t in transactions:
         db.delete(t)
@@ -260,3 +285,28 @@ def delete_event(event_id: int, db: Session = Depends(get_db)):
     db.delete(db_event)
     db.commit()
     return {"ok": True}
+
+
+# ---------------------------
+# ADMIN NOTIFICATIONS
+# ---------------------------
+
+@router.get("/notifications/unread_count")
+def get_unread_count(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    count = db.query(AdminNotificationStatus).filter(AdminNotificationStatus.seen == False).count()
+    return {"unread_count": count}
+
+
+@router.patch("/notifications/mark_seen", status_code=status.HTTP_200_OK)
+def mark_notifications_seen(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    unseen_notifications = db.query(AdminNotificationStatus).filter(AdminNotificationStatus.seen == False).all()
+    for n in unseen_notifications:
+        n.seen = True
+    db.commit()
+    return {"message": "All notifications marked as seen"}

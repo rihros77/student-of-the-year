@@ -4,10 +4,11 @@ import { CalendarDays, Trophy, Loader2 } from "lucide-react";
 
 const EventsPage = () => {
   const [events, setEvents] = useState([]);
+  const [participated, setParticipated] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ✅ Get user (for studentId)
+  // Get student
   let user = null;
   try {
     user = JSON.parse(localStorage.getItem("user"));
@@ -16,7 +17,7 @@ const EventsPage = () => {
   }
   const studentId = user?.id;
 
-  // ✅ Fetch events
+  // Fetch events
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -30,43 +31,77 @@ const EventsPage = () => {
         setLoading(false);
       }
     };
+
     fetchEvents();
   }, []);
 
-  // ✅ Handle participation
-  const handleParticipate = async (eventId) => {
-  if (!studentId) {
-    alert("❌ Student ID not found. Please log in.");
-    return;
-  }
+  // 🔥 Fetch past participations so buttons stay disabled
+  useEffect(() => {
+    if (!studentId) return;
 
-  // Convert both IDs to integers
-  const payload = {
-    student_id: Number(studentId),
-    event_id: Number(eventId),
+    const fetchParticipations = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:8000/api/events/participated/${studentId}`
+        );
+
+        const map = {};
+        res.data.forEach((eventId) => (map[eventId] = true));
+        setParticipated(map);
+      } catch (err) {
+        console.error("Error fetching participation list:", err);
+      }
+    };
+
+    fetchParticipations();
+  }, [studentId]);
+
+  // Handle participation
+  const handleParticipate = async (eventId) => {
+    if (!studentId) {
+      alert("❌ Student ID not found. Please log in.");
+      return;
+    }
+
+    const payload = {
+      student_id: Number(studentId),
+      event_id: Number(eventId),
+    };
+
+    try {
+      await axios.post("http://localhost:8000/api/events/participate", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      // 🚀 Update UI immediately
+      setParticipated((prev) => ({
+        ...prev,
+        [eventId]: true,
+      }));
+
+      alert("✅ Participation registered!");
+    } catch (err) {
+      const message =
+        err.response?.data?.detail || "Failed to register participation.";
+
+      // If already participated → update UI
+      if (message.includes("Already registered")) {
+        setParticipated((prev) => ({
+          ...prev,
+          [eventId]: true,
+        }));
+      }
+
+      alert(`❌ ${message}`);
+    }
   };
 
-  console.log("Sending participation:", payload); // ✅ Debug
-
-  try {
-    await axios.post("http://localhost:8000/api/events/participate", payload, {
-      headers: { "Content-Type": "application/json" },
-    });
-    alert("✅ Participation registered! Admin will note this.");
-  } catch (err) {
-    console.error(err.response || err);
-    const message =
-      err.response?.data?.detail || "Failed to register participation. Try again later.";
-    alert(`❌ ${message}`);
-  }
-};
-
-  // ✅ Sort events
+  // Sort events
   const now = new Date();
   const pastEvents = events.filter((e) => new Date(e.date) < now);
   const upcomingEvents = events.filter((e) => new Date(e.date) >= now);
 
-  // ✅ Loading state
+  // Loading
   if (loading)
     return (
       <div className="flex flex-col items-center justify-center py-16 text-gray-500">
@@ -75,7 +110,7 @@ const EventsPage = () => {
       </div>
     );
 
-  // ✅ Error state
+  // Error
   if (error)
     return (
       <div className="text-center p-8 bg-red-50 text-red-600 rounded-xl">
@@ -93,11 +128,12 @@ const EventsPage = () => {
           </h1>
         </div>
 
-        {/* UPCOMING EVENTS */}
+        {/* Upcoming Events */}
         <section className="mb-10">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">
             Upcoming Events
           </h2>
+
           {upcomingEvents.length === 0 ? (
             <div className="text-center p-16 bg-white rounded-xl shadow-inner border border-dashed border-gray-300">
               <Trophy className="mx-auto text-gray-400" size={48} />
@@ -121,18 +157,28 @@ const EventsPage = () => {
                       {e.category || "General"}
                     </span>
                   </div>
+
                   <p className="text-sm text-gray-600 mb-3 line-clamp-3">
                     {e.description || "No description available."}
                   </p>
+
                   <div className="border-t border-dashed border-gray-100 pt-2">
                     <p className="text-xs text-gray-500">
                       📅 {new Date(e.date).toLocaleDateString()}
                     </p>
+
                     <button
+                      disabled={participated[e.id]}
                       onClick={() => handleParticipate(e.id)}
-                      className="mt-3 w-full px-4 py-2 rounded-md bg-[#736CED] text-white hover:bg-[#635BDB] shadow-md transition"
+                      className={`mt-3 w-full px-4 py-2 rounded-md shadow-md transition
+                        ${
+                          participated[e.id]
+                            ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                            : "bg-[#736CED] text-white hover:bg-[#635BDB]"
+                        }
+                      `}
                     >
-                      Participate
+                      {participated[e.id] ? "Participated" : "Participate"}
                     </button>
                   </div>
                 </div>
@@ -141,11 +187,12 @@ const EventsPage = () => {
           )}
         </section>
 
-        {/* PAST EVENTS */}
+        {/* Past Events */}
         <section>
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">
             Past Events
           </h2>
+
           {pastEvents.length === 0 ? (
             <div className="text-center p-16 bg-white rounded-xl shadow-inner border border-dashed border-gray-300">
               <Trophy className="mx-auto text-gray-400" size={48} />
@@ -171,9 +218,11 @@ const EventsPage = () => {
                       {e.category || "General"}
                     </span>
                   </div>
+
                   <p className="text-sm text-gray-600 mb-3 line-clamp-3">
                     {e.description || "No description provided."}
                   </p>
+
                   <div className="border-t border-dashed border-gray-100 pt-2">
                     <p className="text-xs text-gray-500">
                       📅 {new Date(e.date).toLocaleDateString()}

@@ -4,7 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import database objects
 from app.database import engine, Base
 # Import all models to ensure Base knows about them for table creation
-from app.models import department, student, event, point_transaction, user
+# Import all models to ensure Base knows about them for table creation
+from app.models import (
+    department,
+    student,
+    event,
+    point_transaction,
+    user,
+    admin_notification_status  # ✅ add this line
+)
+
 from app.routers import departments, students, events, leaderboard, auth
 from app.routers import snapshots, reveal  # ✅ added snapshots & reveal
 
