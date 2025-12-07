@@ -310,3 +310,20 @@ def mark_notifications_seen(
         n.seen = True
     db.commit()
     return {"message": "All notifications marked as seen"}
+
+
+@router.get("/{event_id}/participants")
+def get_event_participants(event_id: int, db: Session = Depends(get_db)):
+    print("Participants route accessed")
+
+    participants = (
+        db.query(Student)
+        .join(PointTransaction, PointTransaction.student_id == Student.id)
+        .filter(
+            PointTransaction.event_id == event_id,
+            PointTransaction.reason == "Student opted to participate"
+        )
+        .all()
+    )
+
+    return [{"id": s.id, "name": s.name} for s in participants]

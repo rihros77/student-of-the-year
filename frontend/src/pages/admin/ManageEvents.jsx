@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Edit3, Trash2, X, AlertTriangle, CheckCircle, Loader2, Calendar, List } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, AlertTriangle, CheckCircle, Loader2, Calendar, List, Users } from 'lucide-react';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 const DEFAULT_EVENT_DATA = {
@@ -55,6 +55,40 @@ function useToast() {
     return { toast, showToast, setToast };
 }
 
+/* ---------------------- PARTICIPANTS MODAL ---------------------- */
+
+const ParticipantsModal = ({ isOpen, onClose, participants }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+                <div className="flex justify-between items-center border-b pb-3 mb-4">
+                    <h2 className="text-lg font-bold">Event Participants</h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {participants.length === 0 ? (
+                    <p className="text-gray-500 text-center py-4">No students participated.</p>
+                ) : (
+                    <ul className="space-y-3 max-h-64 overflow-y-auto">
+                        {participants.map((s) => (
+                            <li key={s.id} className="p-3 border rounded-lg bg-gray-50">
+                                <p className="font-semibold">{s.name}</p>
+                                <p className="text-sm text-gray-500">{s.email}</p>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
+    );
+};
+
+/* ---------------------- EVENT FORM MODAL ---------------------- */
+
 const EventFormModal = ({ isOpen, onClose, initialData, onSave }) => {
     const [formData, setFormData] = useState(initialData || DEFAULT_EVENT_DATA);
     const [loading, setLoading] = useState(false);
@@ -108,108 +142,72 @@ const EventFormModal = ({ isOpen, onClose, initialData, onSave }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex items-center justify-center p-4 ">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-100">
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
                 <div className="flex justify-between items-center border-b pb-3 mb-4">
-                    <h3 className="text-xl font-bold text-gray-800">{isEditMode ? 'Edit Event' : 'Create New Event'}</h3>
+                    <h3 className="text-xl font-bold">{isEditMode ? 'Edit Event' : 'Create New Event'}</h3>
                     <button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100 transition">
                         <X size={20} />
                     </button>
                 </div>
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Event Name (Required)</label>
-                        <input
-                            type="text"
-                            id="title"
-                            name="title"
-                            value={formData.title}
-                            onChange={handleChange}
-                            placeholder="e.g., Annual Sports Day"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            required
-                            disabled={loading}
-                        />
+                        <label className="block text-sm mb-1">Event Name (Required)</label>
+                        <input type="text" name="title" value={formData.title} onChange={handleChange}
+                            className="w-full p-3 border border-gray-200 rounded-lg focus:border-indigo-400 focus:ring-indigo-300"
+ required disabled={loading} />
                     </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                            <input
-                                type="date"
-                                id="date"
-                                name="date"
-                                value={formData.date}
-                                onChange={handleChange}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                                required
-                                disabled={loading}
-                            />
+                            <label className="block text-sm mb-1">Date</label>
+                            <input type="date" name="date" value={formData.date} onChange={handleChange}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:border-indigo-400 focus:ring-indigo-300"
+ required disabled={loading} />
                         </div>
+
                         <div>
-                            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                            <select
-                                id="category"
-                                name="category"
-                                value={formData.category}
-                                onChange={handleChange}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                disabled={loading}
-                            >
+                            <label className="block text-sm mb-1">Category</label>
+                            <select name="category" value={formData.category} onChange={handleChange}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:border-indigo-400 focus:ring-indigo-300"
+ disabled={loading}>
                                 {CATEGORIES.map(cat => (
                                     <option key={cat.value} value={cat.value}>{cat.label}</option>
                                 ))}
                             </select>
                         </div>
                     </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="participation_points" className="block text-sm font-medium text-gray-700 mb-1">Participation Points</label>
-                            <input
-                                type="number"
-                                id="participation_points"
-                                name="participation_points"
-                                min="0"
-                                value={formData.participation_points}
-                                onChange={handleChange}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                                disabled={loading}
-                            />
+                            <label className="block text-sm mb-1">Participation Points</label>
+                            <input type="number" name="participation_points" min="0"
+                                value={formData.participation_points} onChange={handleChange}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:border-indigo-400 focus:ring-indigo-300"
+ disabled={loading} />
                         </div>
+
                         <div>
-                            <label htmlFor="winner_points" className="block text-sm font-medium text-gray-700 mb-1">Winner/Bonus Points</label>
-                            <input
-                                type="number"
-                                id="winner_points"
-                                name="winner_points"
-                                min="0"
-                                value={formData.winner_points}
-                                onChange={handleChange}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                                disabled={loading}
-                            />
+                            <label className="block text-sm mb-1">Winner Points</label>
+                            <input type="number" name="winner_points" min="0"
+                                value={formData.winner_points} onChange={handleChange}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:border-indigo-400 focus:ring-indigo-300"
+ disabled={loading} />
                         </div>
                     </div>
+
                     <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-                        <textarea
-                            id="description"
-                            name="description"
-                            value={formData.description}
-                            onChange={handleChange}
-                            rows="2"
-                            placeholder="Brief summary of the event."
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none"
-                            disabled={loading}
-                        />
+                        <label className="block text-sm mb-1">Description</label>
+                        <textarea name="description" value={formData.description} onChange={handleChange}
+                            rows="2" className="w-full p-3 border border-gray-200 rounded-lg focus:border-indigo-400 focus:ring-indigo-300"
+ disabled={loading} />
                     </div>
-                    <button
-                        type="submit"
-                        disabled={loading || !formData.title.trim() || formData.participation_points === null}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition transform active:scale-95 text-white"
-                        style={{ backgroundColor: '#9F9FED' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#736CED')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#9F9FED')}
-                    >
+
+                    <button type="submit"
+                        disabled={loading || !formData.title.trim()}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg text-white transition"
+                        style={{ backgroundColor: '#9F9FED' }}>
                         {loading ? <Loader2 size={20} className="animate-spin" /> : (isEditMode ? <Edit3 size={20} /> : <Plus size={20} />)}
                         {loading ? 'Saving...' : (isEditMode ? 'Update Event' : 'Create Event')}
                     </button>
@@ -219,12 +217,28 @@ const EventFormModal = ({ isOpen, onClose, initialData, onSave }) => {
     );
 };
 
+/* ---------------------- MAIN PAGE ---------------------- */
+
 export default function ManageEvents() {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentEvent, setCurrentEvent] = useState(null);
     const { toast, showToast, setToast } = useToast();
+
+    /* Participants */
+    const [participants, setParticipants] = useState([]);
+    const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
+
+    const openParticipantsModal = async (eventId) => {
+        try {
+            const data = await apiFetch(`${API_BASE_URL}/events/${eventId}/participants`);
+            setParticipants(data);
+            setIsParticipantsOpen(true);
+        } catch (err) {
+            showToast("Failed to load participants", "error");
+        }
+    };
 
     const fetchEvents = useCallback(async () => {
         setLoading(true);
@@ -262,7 +276,7 @@ export default function ManageEvents() {
     };
 
     const handleDelete = async (eventId, eventTitle) => {
-        if (!window.confirm(`Are you sure you want to delete the event: "${eventTitle}"? This will also remove all associated point transactions.`)) return;
+        if (!window.confirm(`Are you sure you want to delete: "${eventTitle}"?`)) return;
         try {
             await apiFetch(`${API_BASE_URL}/events/${eventId}`, { method: 'DELETE' });
             showToast(`Event '${eventTitle}' deleted.`, 'success');
@@ -277,13 +291,13 @@ export default function ManageEvents() {
         const Icon = toast.type === 'success' ? CheckCircle : (toast.type === 'error' ? AlertTriangle : List);
         const color = toast.type === 'success' ? 'bg-green-500' : (toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500');
         return (
-            <div className={`fixed bottom-4 right-4 z-50 p-4 rounded-lg text-white shadow-xl flex items-center gap-3 transition-all duration-300 transform ${color} `}>
+            <div className={`fixed bottom-4 right-4 z-50 p-4 rounded-lg text-white shadow-xl flex items-center gap-3 transition-all ${color}`}>
                 <Icon size={20} />
                 <span>{toast.message}</span>
-                <button onClick={() => setToast(null)} className="ml-4 opacity-75 hover:opacity-100"><X size={16} /></button>
+                <button onClick={() => setToast(null)}><X size={16} /></button>
             </div>
         );
-    }, [toast, setToast]);
+    }, [toast]);
 
     const formatPoints = (points) => (points > 0 ? `+${points}` : '0');
     const formatDate = (dateString) => {
@@ -300,76 +314,103 @@ export default function ManageEvents() {
                 <div className="flex justify-end mb-6">
                     <button
                         onClick={handleOpenCreate}
-                        className="flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition transform active:scale-95 text-white"
-                        style={{ backgroundColor: '#9F9FED' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#736CED')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#9F9FED')}
-                    >
+                        className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold"
+                        style={{ backgroundColor: '#9F9FED' }}>
                         <Plus size={20} /> Add New Event
                     </button>
                 </div>
 
-                <div className="bg-white rounded-[20px] border border-gray-300 overflow-hidden">
+                <div className="bg-white rounded-[20px] border border-gray-200 overflow-hidden">
+
                     {loading ? (
                         <div className="p-8 text-center text-indigo-500 flex justify-center items-center gap-2">
-                            <Loader2 size={24} className="animate-spin" /> Loading Events...
+                            <Loader2 className="animate-spin" /> Loading Events...
                         </div>
                     ) : events.length === 0 ? (
                         <div className="p-12 text-center text-gray-500">
                             <AlertTriangle size={36} className="mx-auto mb-3 text-yellow-500" />
-                            <p className="text-xl font-semibold">No Events Found</p>
-                            <p>Click "Add New Event" to start tracking achievements!</p>
+                            <p>No events found.</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 border border-gray-300 rounded-[20px] overflow-hidden">
+                            <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-[#F0F0F0]">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Title</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Category</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Date</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points (Part/Win)</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Category</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Date</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Points</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                                     </tr>
                                 </thead>
+
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {events.map((event) => (
                                         <tr key={event.id} className="hover:bg-indigo-50 transition">
                                             <td className="px-6 py-4">
                                                 <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                                                <div className="text-xs text-gray-500 md:hidden">ID: {event.id} | {event.category}</div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
-                                                <span className="capitalize px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">{event.category}</span>
+
+                                            <td className="px-6 py-4 text-gray-500 hidden sm:table-cell">
+                                                <span className="capitalize px-2 inline-flex text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                    {event.category}
+                                                </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                                                <div className="flex items-center"><Calendar size={14} className="mr-1 text-gray-400" />{formatDate(event.date)}</div>
+
+                                            <td className="px-6 py-4 text-gray-500 hidden md:table-cell">
+                                                <div className="flex items-center">
+                                                    <Calendar size={14} className="mr-1" /> {formatDate(event.date)}
+                                                </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
-                                                <span className="text-green-600">{formatPoints(event.participation_points)}</span> / <span className="text-indigo-600">{formatPoints(event.winner_points)}</span>
+
+                                            <td className="px-6 py-4 font-semibold">
+                                                <span className="text-green-600">{formatPoints(event.participation_points)}</span> /
+                                                <span className="text-indigo-600"> {formatPoints(event.winner_points)}</span>
                                             </td>
+
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button onClick={() => handleOpenEdit(event)} className="text-indigo-600 hover:text-indigo-900 p-2 rounded-full hover:bg-gray-100 transition" title="Edit Event">
+
+                                                {/* Users Icon to show participants */}
+                                                <button
+                                                    onClick={() => openParticipantsModal(event.id)}
+                                                    className="text-blue-600 hover:text-blue-900 p-2 rounded-full hover:bg-gray-100 transition"
+                                                    title="View Participants"
+                                                >
+                                                    <Users size={18} />
+                                                </button>
+
+                                                <button onClick={() => handleOpenEdit(event)} className="ml-2 text-indigo-600 hover:text-indigo-900 p-2 rounded-full hover:bg-gray-100 transition">
                                                     <Edit3 size={18} />
                                                 </button>
-                                                <button onClick={() => handleDelete(event.id, event.title)} className="ml-2 text-red-600 hover:text-red-900 p-2 rounded-full hover:bg-gray-100 transition" title="Delete Event">
+
+                                                <button onClick={() => handleDelete(event.id, event.title)} className="ml-2 text-red-600 hover:text-red-900 p-2 rounded-full hover:bg-gray-100 transition">
                                                     <Trash2 size={18} />
                                                 </button>
+
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
+
                             </table>
                         </div>
                     )}
                 </div>
             </div>
 
+            {/* Event Form */}
             <EventFormModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 initialData={currentEvent}
                 onSave={handleSave}
+            />
+
+            {/* Participants Modal */}
+            <ParticipantsModal
+                isOpen={isParticipantsOpen}
+                onClose={() => setIsParticipantsOpen(false)}
+                participants={participants}
             />
         </div>
     );
